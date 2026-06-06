@@ -83,38 +83,51 @@ def instrument_lua_file(code: str, file_id: str) -> str:
     interceptor_payload = """
     local __orig_update = pewpew.add_update_callback
     pewpew.add_update_callback = function(user_callback)
+    local __tick_count = 0
     __orig_update(function()
-        local function serialize(val, seen)
-        seen = seen or {}
-        if type(val) == "string" then return string.format("%q", val) end
-        if type(val) == "number" or type(val) == "boolean" then return tostring(val) end
-        if type(val) == "table" then
-            if seen[val] then return '"<circular>"' end
-            seen[val] = true
-            local parts = {}
-            for k, v in pairs(val) do
-            if k ~= "_G" and k ~= "pewpew" and type(v) ~= "function" then
-                local k_str = type(k) == "string" and string.format("%q", k) or '"' .. tostring(k) .. '"'
-                local v_str = serialize(v, seen)
-                if v_str then table.insert(parts, k_str .. ":" .. v_str) end
-            end
-            end
-            seen[val] = nil
-            return "{" .. table.concat(parts, ",") .. "}"
-        end
-        return "null"
+        __tick_count = __tick_count + 1
+        local is_report_tick = (__tick_count % 6 == 0)
+        
+        local mem_usage = nil
+        if is_report_tick then
+            collectgarbage("collect")
+            mem_usage = collectgarbage("count")
         end
         
-        local state = { locals = _G.__live_mem or {}, globals = {} }
-        for k, v in pairs(_G) do
-        if type(v) == "number" or type(v) == "string" or type(v) == "boolean" then
-            state.globals[k] = v
-        end
-        end
-        
-        print("__MEM__" .. serialize(state))
-        print("__MEM_USAGE__" .. tostring(collectgarbage("count")))
         user_callback()
+        
+        if is_report_tick then
+            local function serialize(val, seen)
+            seen = seen or {}
+            if type(val) == "string" then return string.format("%q", val) end
+            if type(val) == "number" or type(val) == "boolean" then return tostring(val) end
+            if type(val) == "table" then
+                if seen[val] then return '"<circular>"' end
+                seen[val] = true
+                local parts = {}
+                for k, v in pairs(val) do
+                if k ~= "_G" and k ~= "pewpew" and type(v) ~= "function" then
+                    local k_str = type(k) == "string" and string.format("%q", k) or '"' .. tostring(k) .. '"'
+                    local v_str = serialize(v, seen)
+                    if v_str then table.insert(parts, k_str .. ":" .. v_str) end
+                end
+                end
+                seen[val] = nil
+                return "{" .. table.concat(parts, ",") .. "}"
+            end
+            return "null"
+            end
+            
+            local state = { locals = _G.__live_mem or {}, globals = {} }
+            for k, v in pairs(_G) do
+            if type(v) == "number" or type(v) == "string" or type(v) == "boolean" then
+                state.globals[k] = v
+            end
+            end
+            
+            print("__MEM__" .. serialize(state))
+            print("__MEM_USAGE__" .. tostring(mem_usage))
+        end
     end)
     end
     """
