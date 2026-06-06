@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
-import { RiArrowLeftLine, RiTerminalLine } from "@remixicon/react";
-import { Layout, Model, TabNode, IJsonModel } from "flexlayout-react";
+import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree } from "@remixicon/react";
+import { Layout, Model, TabNode, IJsonModel, Actions, DockLocation } from "flexlayout-react";
 import "flexlayout-react/style/alpha_dark.css";
 
 interface SandboxViewProps {
@@ -11,7 +11,7 @@ interface SandboxViewProps {
 
 const DEFAULT_LAYOUT: IJsonModel = {
   global: {
-    tabEnableClose: false,
+    tabEnableClose: true,
     tabEnableRename: false,
     tabSetEnableMaximize: true,
     tabEnablePopout: true,
@@ -21,14 +21,17 @@ const DEFAULT_LAYOUT: IJsonModel = {
   borders: [],
   layout: {
     type: "row",
+    id: "root",
     weight: 100,
     children: [
       {
         type: "tabset",
         weight: 70,
+        id: "sandbox-tabset",
         children: [
           {
             type: "tab",
+            id: "sandbox-tab",
             name: "Sandbox",
             component: "sandbox",
           },
@@ -37,9 +40,11 @@ const DEFAULT_LAYOUT: IJsonModel = {
       {
         type: "tabset",
         weight: 30,
+        id: "memory-tabset",
         children: [
           {
             type: "tab",
+            id: "memory-tab",
             name: "Memory Tree",
             component: "memory",
           },
@@ -52,6 +57,37 @@ const DEFAULT_LAYOUT: IJsonModel = {
 export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const [memoryState, setMemoryState] = useState<any>(null);
   const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT));
+  const [, forceUpdate] = useState({});
+  const tabStatesRef = React.useRef<Record<string, any>>({});
+
+  // Continuously track the latest state of all known tabs while they are open
+  const jsonModel = model.toJson();
+  const currentTabIds = ["sandbox-tab", "memory-tab"];
+  
+  currentTabIds.forEach(id => {
+    const node = model.getNodeById(id);
+    if (node) {
+      const parent = node.getParent();
+      let subLayout: any = undefined;
+      
+      // Check if this tab's parent is within a floating or popout window
+      if (jsonModel.subLayouts) {
+        for (const [key, sl] of Object.entries(jsonModel.subLayouts)) {
+           if (JSON.stringify(sl).includes(`"id":"${id}"`)) {
+             subLayout = sl;
+             break;
+           }
+        }
+      }
+      
+      tabStatesRef.current[id] = {
+        json: node.toJson(),
+        parentId: parent?.getId(),
+        // Only restore the subLayout itself if this tab was its only child (otherwise the window stays open without this tab)
+        subLayout: parent?.getChildren().length === 1 ? subLayout : undefined,
+      };
+    }
+  });
 
   /** intercepts the iframe console once it loads. */
   const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
@@ -129,9 +165,99 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     return null;
   };
 
+  const toggleTab = (id: string, name: string, component: string, defaultLocation: DockLocation) => {
+    const node = model.getNodeById(id);
+    if (node) {
+      model.doAction(Actions.deleteTab(id));
+    } else {
+      const saved = tabStatesRef.current[id];
+      const jsonNode = saved?.json || { type: "tab", id, name, component };
+
+      // If the tab was the only thing in a popout or floating window, recreate the whole window!
+      if (saved?.subLayout && saved.subLayout.rect) {
+        model.doAction(Actions.createSubLayout(
+          saved.subLayout.layout, 
+          saved.subLayout.rect, 
+          saved.subLayout.type || "float"
+        ));
+        return;
+      }
+
+      let targetId = "root";
+      let location = defaultLocation;
+
+      // If the parent tabset is still around, dock it exactly back where it was
+      if (saved?.parentId && model.getNodeById(saved.parentId)) {
+        targetId = saved.parentId;
+        location = DockLocation.CENTER;
+      }
+
+      model.doAction(
+        Actions.addTab(jsonNode, targetId, location, -1, true)
+      );
+    }
+  };
+
+  const hasSandbox = !!model.getNodeById("sandbox-tab");
+  const hasMemory = !!model.getNodeById("memory-tab");
+
   return (
-    <div className="w-full h-[100dvh] overflow-hidden bg-[#0A0A0A] text-foreground relative">
-      <Layout model={model} factory={factory} />
+    <div className="flex w-full h-[100dvh] overflow-hidden bg-[var(--color-background)] text-[var(--color-text)] relative">
+      {/* Left Toolbar styled like FlexLayout borders */}
+      <div 
+        className="h-full flex flex-col items-center py-2 z-20"
+        style={{ 
+          width: "40px",
+          backgroundColor: "var(--color-border-background, #1a1a1a)",
+          borderRight: "1px solid var(--color-border-divider-line, #333)"
+        }}
+      >
+        <button 
+          onClick={() => toggleTab("sandbox-tab", "Sandbox", "sandbox", DockLocation.LEFT)}
+          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] ${
+            hasSandbox 
+              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+          }`}
+          title={hasSandbox ? "Hide Sandbox" : "Show Sandbox"}
+        >
+          {/* <RiGamepadLine className="w-5 h-5 mb-3" /> */}
+          {/* <span  */}
+          {/*   className="text-xs uppercase tracking-wider font-semibold"  */}
+          {/*   style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} */}
+          {/* > */}
+          {/*   Sandbox */}
+          {/* </span> */}
+          <RiGamepadLine className="w-5 h-5" />
+        </button>
+
+        <button 
+          onClick={() => toggleTab("memory-tab", "Memory Tree", "memory", DockLocation.RIGHT)}
+          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mt-2 ${
+            hasMemory 
+              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+          }`}
+          title={hasMemory ? "Hide Memory Tree" : "Show Memory Tree"}
+        >
+          {/* <RiNodeTree className="w-5 h-5 mb-3" /> */}
+          {/* <span  */}
+          {/*   className="text-xs uppercase tracking-wider font-semibold"  */}
+          {/*   style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} */}
+          {/* > */}
+          {/*   Memory */}
+          {/* </span> */}
+          <RiNodeTree className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="flex-1 relative h-full">
+        <Layout 
+          model={model} 
+          factory={factory} 
+          onModelChange={() => forceUpdate({})} 
+        />
+      </div>
     </div>
   );
 };
