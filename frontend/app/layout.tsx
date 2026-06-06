@@ -22,10 +22,10 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontSans.variable, "font-mono", jetbrainsMono.variable, manropeHeading.variable)}
+      className={cn("antialiased dark", fontSans.variable, "font-sans", jetbrainsMono.variable, manropeHeading.variable)}
     >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body className="min-h-screen bg-neutral-950 text-neutral-50 selection:bg-primary/30 font-sans">
+        <ThemeProvider forcedTheme="dark">{children}</ThemeProvider>
       </body>
     </html>
   )
