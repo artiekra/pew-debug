@@ -109,8 +109,13 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
             const jsonStartIndex = logLine.indexOf("__MEM__") + 7;
             let jsonStr = logLine.substring(jsonStartIndex);
             
-            // wipe out the 'fx' suffix from fixed-point numbers
-            jsonStr = jsonStr.replace(/(-?\d+(?:\.\d+)?)fx/g, "$1");
+            // preserve the 'fx' suffix by wrapping fixed-point numbers in a special object, ignoring those inside strings
+            jsonStr = jsonStr.replace(/"(?:[^"\\]|\\.)*"|(-?\d+(?:\.\d+)?)fx/g, (match, fxGroup) => {
+              if (fxGroup !== undefined) {
+                return `{"__fx":"${fxGroup}"}`;
+              }
+              return match;
+            });
             
             const state = JSON.parse(jsonStr);
             setMemoryState(state);

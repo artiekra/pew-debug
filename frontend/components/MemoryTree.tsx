@@ -31,7 +31,8 @@ const JsonNode = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const isMissing = value === undefined;
-  const isObject = !isMissing && value !== null && typeof value === "object";
+  const isFx = !isMissing && value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 1 && "__fx" in value;
+  const isObject = !isMissing && !isFx && value !== null && typeof value === "object";
   const isEmpty = isObject && Object.keys(value).length === 0;
 
   const pathString = JSON.stringify(path);
@@ -59,6 +60,8 @@ const JsonNode = ({
           
           {isMissing ? (
             <span className="text-muted-foreground/60 italic text-xs">unavailable</span>
+          ) : isFx ? (
+            <span className="text-purple-400 font-medium drop-shadow-[0_0_2px_rgba(192,132,252,0.4)]">{value.__fx}fx</span>
           ) : isObject ? (
             isEmpty ? (
               <span className="text-muted-foreground font-semibold">{"{}"}</span>
