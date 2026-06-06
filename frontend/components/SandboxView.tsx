@@ -2,20 +2,63 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
 import { RiArrowLeftLine, RiTerminalLine } from "@remixicon/react";
+import { Layout, Model, TabNode, IJsonModel } from "flexlayout-react";
+import "flexlayout-react/style/alpha_dark.css";
 
 interface SandboxViewProps {
   gameUrl: string;
 }
 
+const DEFAULT_LAYOUT: IJsonModel = {
+  global: {
+    tabEnableClose: false,
+    tabEnableRename: false,
+    tabSetEnableMaximize: true,
+    tabEnablePopout: true,
+    tabEnablePopoutFloatIcon: true,
+    tabEnablePopoutIcon: true,
+  },
+  borders: [],
+  layout: {
+    type: "row",
+    weight: 100,
+    children: [
+      {
+        type: "tabset",
+        weight: 70,
+        children: [
+          {
+            type: "tab",
+            name: "Sandbox",
+            component: "sandbox",
+          },
+        ],
+      },
+      {
+        type: "tabset",
+        weight: 30,
+        children: [
+          {
+            type: "tab",
+            name: "Memory Tree",
+            component: "memory",
+          },
+        ],
+      },
+    ],
+  },
+};
+
 export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const [memoryState, setMemoryState] = useState<any>(null);
+  const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT));
 
   /** intercepts the iframe console once it loads. */
   const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
     const iframe = e.currentTarget;
     
     try {
-      const targetWindow = iframe.contentWindow;
+      const targetWindow = iframe.contentWindow as any;
       if (!targetWindow) return;
 
       const originalLog = targetWindow.console.log;
@@ -48,39 +91,47 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     }
   };
 
-  return (
-    <div className="flex w-full h-[100dvh] overflow-hidden bg-[#0A0A0A]">
-      <div className="relative w-full lg:w-[70%] h-full bg-black shadow-[0_0_50px_rgba(0,0,0,0.8)] z-20">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => window.location.reload()}
-          className="absolute top-4 left-4 z-50 bg-black/40 backdrop-blur-md text-white border-white/10 hover:bg-black/60 hover:text-primary transition-all duration-300 shadow-lg rounded-full px-4 h-10"
-        >
-          <RiArrowLeftLine className="w-4 h-4 mr-2" />
-          Exit Sandbox
-        </Button>
-        <iframe 
-          src={gameUrl} 
-          onLoad={handleIframeLoad}
-          className="w-full h-full border-none"
-          title="pewpew sandbox"
-        />
-      </div>
+  const factory = (node: TabNode) => {
+    const component = node.getComponent();
 
-      <div className="hidden lg:flex w-[30%] h-full flex-col bg-black/40 backdrop-blur-xl border-l border-white/5 relative z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
-        <div className="px-6 py-5 border-b border-white/5 bg-gradient-to-r from-primary/10 to-transparent">
-          <h5 className="text-foreground font-heading font-semibold text-lg flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
-              <RiTerminalLine className="w-5 h-5 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
-            </div>
-            Live Memory Tree
-          </h5>
+    if (component === "sandbox") {
+      return (
+        <div className="relative w-full h-full bg-black">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.location.reload()}
+            className="absolute top-4 left-4 z-50 bg-black/40 backdrop-blur-md text-white border-white/10 hover:bg-black/60 hover:text-primary transition-all duration-300 shadow-lg rounded-full px-4 h-10"
+          >
+            <RiArrowLeftLine className="w-4 h-4 mr-2" />
+            Exit Sandbox
+          </Button>
+          <iframe 
+            src={gameUrl} 
+            onLoad={handleIframeLoad}
+            className="w-full h-full border-none"
+            title="pewpew sandbox"
+          />
         </div>
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-          <MemoryTree data={memoryState} />
+      );
+    }
+
+    if (component === "memory") {
+      return (
+        <div className="w-full h-full flex flex-col bg-black/40 backdrop-blur-xl relative">
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <MemoryTree data={memoryState} />
+          </div>
         </div>
-      </div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="w-full h-[100dvh] overflow-hidden bg-[#0A0A0A] text-foreground relative">
+      <Layout model={model} factory={factory} />
     </div>
   );
 };
