@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
+import { RiArrowLeftLine, RiTerminalLine } from "@remixicon/react";
 
 interface SandboxViewProps {
   gameUrl: string;
@@ -48,15 +49,16 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   };
 
   return (
-    <div className="flex w-full h-screen overflow-hidden">
-      <div className="relative w-[70%] h-full bg-black">
+    <div className="flex w-full h-[100dvh] overflow-hidden bg-[#0A0A0A]">
+      <div className="relative w-full lg:w-[70%] h-full bg-black shadow-[0_0_50px_rgba(0,0,0,0.8)] z-20">
         <Button 
           variant="outline" 
           size="sm" 
           onClick={() => window.location.reload()}
-          className="absolute top-2 left-2 z-50 bg-black/50 text-white hover:bg-black/70 border-gray-600"
+          className="absolute top-4 left-4 z-50 bg-black/40 backdrop-blur-md text-white border-white/10 hover:bg-black/60 hover:text-primary transition-all duration-300 shadow-lg rounded-full px-4 h-10"
         >
-          &larr; back
+          <RiArrowLeftLine className="w-4 h-4 mr-2" />
+          Exit Sandbox
         </Button>
         <iframe 
           src={gameUrl} 
@@ -66,11 +68,18 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
         />
       </div>
 
-      <div className="w-[30%] h-full overflow-y-auto bg-[#1e1e1e] text-[#d4d4d4] p-4 border-l-2 border-[#333]">
-        <h5 className="text-white mb-3 pb-2 border-b border-gray-600 font-semibold">
-          live memory tree
-        </h5>
-        <MemoryTree data={memoryState} />
+      <div className="hidden lg:flex w-[30%] h-full flex-col bg-black/40 backdrop-blur-xl border-l border-white/5 relative z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
+        <div className="px-6 py-5 border-b border-white/5 bg-gradient-to-r from-primary/10 to-transparent">
+          <h5 className="text-foreground font-heading font-semibold text-lg flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+              <RiTerminalLine className="w-5 h-5 text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
+            </div>
+            Live Memory Tree
+          </h5>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <MemoryTree data={memoryState} />
+        </div>
       </div>
     </div>
   );
