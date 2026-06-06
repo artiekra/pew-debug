@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
-import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree } from "@remixicon/react";
+import { MemoryUsage } from "./MemoryUsage";
+import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine } from "@remixicon/react";
 import { Layout, Model, TabNode, IJsonModel, Actions, DockLocation } from "flexlayout-react";
 import "flexlayout-react/style/alpha_dark.css";
 
@@ -48,6 +49,12 @@ const DEFAULT_LAYOUT: IJsonModel = {
             name: "Memory Tree",
             component: "memory",
           },
+          {
+            type: "tab",
+            id: "usage-tab",
+            name: "Memory Usage",
+            component: "usage",
+          },
         ],
       },
     ],
@@ -56,13 +63,14 @@ const DEFAULT_LAYOUT: IJsonModel = {
 
 export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const [memoryState, setMemoryState] = useState<any>(null);
+  const [memoryUsage, setMemoryUsage] = useState<number[]>([]);
   const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT));
   const [, forceUpdate] = useState({});
   const tabStatesRef = React.useRef<Record<string, any>>({});
 
   // Continuously track the latest state of all known tabs while they are open
   const jsonModel = model.toJson();
-  const currentTabIds = ["sandbox-tab", "memory-tab"];
+  const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab"];
   
   currentTabIds.forEach(id => {
     const node = model.getNodeById(id);
@@ -103,7 +111,15 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       targetWindow.console.log = (...args: any[]) => {
         const logLine = args.join(" ");
 
-        if (logLine.includes("__MEM__")) {
+        if (logLine.includes("__MEM_USAGE__")) {
+          const usageStr = logLine.substring(logLine.indexOf("__MEM_USAGE__") + 13);
+          const usageNum = parseFloat(usageStr);
+          if (!isNaN(usageNum)) {
+            setMemoryUsage(prev => {
+              return [...prev, usageNum];
+            });
+          }
+        } else if (logLine.includes("__MEM__")) {
           try {
             // slice out everything before the json structure starts
             const jsonStartIndex = logLine.indexOf("__MEM__") + 7;
@@ -167,6 +183,16 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       );
     }
 
+    if (component === "usage") {
+      return (
+        <div className="w-full h-full flex flex-col bg-black/40 backdrop-blur-xl relative">
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <MemoryUsage data={memoryUsage} />
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -205,6 +231,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
   const hasSandbox = !!model.getNodeById("sandbox-tab");
   const hasMemory = !!model.getNodeById("memory-tab");
+  const hasUsage = !!model.getNodeById("usage-tab");
 
   return (
     <div className="flex w-full h-[100dvh] overflow-hidden bg-[var(--color-background)] text-[var(--color-text)] relative">
@@ -253,6 +280,18 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           {/*   Memory */}
           {/* </span> */}
           <RiNodeTree className="w-5 h-5" />
+        </button>
+
+        <button 
+          onClick={() => toggleTab("usage-tab", "Memory Usage", "usage", DockLocation.RIGHT)}
+          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mt-2 ${
+            hasUsage 
+              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+          }`}
+          title={hasUsage ? "Hide Memory Usage" : "Show Memory Usage"}
+        >
+          <RiLineChartLine className="w-5 h-5" />
         </button>
       </div>
 

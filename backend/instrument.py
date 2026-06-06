@@ -113,6 +113,7 @@ def instrument_lua_file(code: str, file_id: str) -> str:
         end
         
         print("__MEM__" .. serialize(state))
+        print("__MEM_USAGE__" .. tostring(collectgarbage("count")))
         user_callback()
     end)
     end
