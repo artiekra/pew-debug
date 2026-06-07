@@ -87,8 +87,17 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
         cbUsage = null;
         cbDump = null;
         window.requestAnimationFrame((now) => {
-          u(now);
-          d(now);
+          const dt = 1000 / 60;
+          if (usageWin) {
+            usageWin.virtualTime += dt;
+            usageWin.perfTime += dt;
+          }
+          if (dumpWin) {
+            dumpWin.virtualTime += dt;
+            dumpWin.perfTime += dt;
+          }
+          u(usageWin ? usageWin.perfTime : now);
+          d(dumpWin ? dumpWin.perfTime : now);
         });
       }
     };

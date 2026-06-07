@@ -149,11 +149,17 @@ async def get_level_data(folder_id: str, request: Request) -> Response:
     zip_buffer = io.BytesIO()
     
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for file_path in target_dir.rglob("*"):
+        for file_path in sorted(target_dir.rglob("*")):
             if file_path.is_file() and file_path.suffix == ".lua":
                 rel_path = file_path.relative_to(target_dir)
                 zip_path = f"level/{rel_path.as_posix()}"
-                zip_file.write(file_path, zip_path)
+                
+                zinfo = zipfile.ZipInfo.from_file(file_path, arcname=zip_path)
+                zinfo.date_time = (2024, 1, 1, 0, 0, 0)
+                zinfo.compress_type = zipfile.ZIP_DEFLATED
+                
+                with open(file_path, "rb") as f:
+                    zip_file.writestr(zinfo, f.read())
                 
     zip_bytes = zip_buffer.getvalue()
     

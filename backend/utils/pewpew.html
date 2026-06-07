@@ -139,6 +139,43 @@
   </div>
 
   <script>
+    // Force a deterministic random seed for perfectly synchronized execution
+    let seed = 123456789;
+    Math.random = function() {
+      // Linear Congruential Generator (LCG)
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    
+    window.virtualTime = 1600000000000;
+    window.perfTime = 0;
+    
+    const OriginalDate = Date;
+    window.Date = function() {
+      if (arguments.length === 0) {
+        return new OriginalDate(window.virtualTime);
+      }
+      return new (Function.prototype.bind.apply(OriginalDate, [null].concat(Array.prototype.slice.call(arguments))))();
+    };
+    window.Date.now = function() { return window.virtualTime; };
+    window.Date.parse = OriginalDate.parse;
+    window.Date.UTC = OriginalDate.UTC;
+    
+    if (window.performance) {
+      window.performance.now = function() { return window.perfTime; };
+    }
+    
+    // Emscripten may use crypto.getRandomValues for random devices
+    if (window.crypto) {
+      window.crypto.getRandomValues = function(arr) {
+        let bytes = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+        for (let i = 0; i < bytes.length; i++) {
+          bytes[i] = Math.floor(Math.random() * 256);
+        }
+        return arr;
+      };
+    }
+
     if (window.parent && window.parent !== window && window.parent.registerIframe) {
       window.parent.registerIframe(window, document.getElementById('canvas'));
     }
