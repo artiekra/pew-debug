@@ -38,6 +38,21 @@ const JsonNode = ({
   const pathString = JSON.stringify(path);
   const isFavourited = favourites.some(f => JSON.stringify(f) === pathString);
 
+  const isFunctionString = typeof value === "string" && value.startsWith("function: ");
+  const isColorVariable = nodeKey !== undefined && nodeKey.toLowerCase().includes("color") && typeof value === "number" && Number.isInteger(value);
+
+  let colorHex = "";
+  let textColorClass = "";
+  if (isColorVariable) {
+    const unsignedValue = value >>> 0;
+    colorHex = "#" + unsignedValue.toString(16).padStart(8, "0");
+    const r = parseInt(colorHex.substring(1, 3), 16);
+    const g = parseInt(colorHex.substring(3, 5), 16);
+    const b = parseInt(colorHex.substring(5, 7), 16);
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    textColorClass = yiq >= 128 ? 'text-black' : 'text-white';
+  }
+
   return (
     <div className="ml-4 flex flex-col font-mono text-[13px] leading-relaxed group/node">
       <div className="flex items-start group">
@@ -73,8 +88,17 @@ const JsonNode = ({
                 {isExpanded ? "" : "{ ... }"}
               </span>
             )
+          ) : isFunctionString ? (
+            <span className="text-muted-foreground font-medium">&lt;{value}&gt;</span>
           ) : typeof value === "string" ? (
             <span className="text-amber-300 break-all">"{value}"</span>
+          ) : isColorVariable ? (
+            <span 
+              className={`px-1 rounded-sm ${textColorClass}`}
+              style={{ backgroundColor: colorHex }}
+            >
+              {colorHex}
+            </span>
           ) : typeof value === "number" ? (
             <span className="text-emerald-400 font-medium drop-shadow-[0_0_2px_rgba(52,211,153,0.4)]">{value}</span>
           ) : typeof value === "boolean" ? (
