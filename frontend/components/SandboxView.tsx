@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
 import { MemoryUsage } from "./MemoryUsage";
-import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine, RiSettings3Line } from "@remixicon/react";
+import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine, RiSettings3Line, RiGithubFill, RiExternalLinkLine } from "@remixicon/react";
 import { Layout, Model, TabNode, IJsonModel, Actions, DockLocation } from "flexlayout-react";
 import { SettingsTab } from "./SettingsTab";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import "flexlayout-react/style/alpha_dark.css";
 
 interface SandboxViewProps {
@@ -61,6 +62,18 @@ const DEFAULT_LAYOUT: IJsonModel = {
     ],
   },
 };
+
+const SidebarTooltip = ({ title, description, children }: { title: string, description: string, children: React.ReactNode }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      {children}
+    </TooltipTrigger>
+    <TooltipContent side="right" sideOffset={10} className="flex flex-col gap-1 px-3 py-2 border border-[#333] bg-[#1a1a1a] shadow-lg rounded-md z-50">
+      <span className="font-bold text-sm text-white">{title}</span>
+      <span className="text-[#a0a0a0] text-xs">{description}</span>
+    </TooltipContent>
+  </Tooltip>
+);
 
 export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const [memoryState, setMemoryState] = useState<any>(null);
@@ -397,69 +410,73 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           borderRight: "1px solid var(--color-border-divider-line, #333)"
         }}
       >
-        <button 
-          onClick={() => toggleTab("sandbox-tab", "Sandbox", "sandbox", DockLocation.LEFT)}
-          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] ${
-            hasSandbox 
-              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
-              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
-          }`}
-          title={hasSandbox ? "Hide Sandbox" : "Show Sandbox"}
-        >
-          {/* <RiGamepadLine className="w-5 h-5 mb-3" /> */}
-          {/* <span  */}
-          {/*   className="text-xs uppercase tracking-wider font-semibold"  */}
-          {/*   style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} */}
-          {/* > */}
-          {/*   Sandbox */}
-          {/* </span> */}
-          <RiGamepadLine className="w-5 h-5" />
-        </button>
+        <TooltipProvider delayDuration={0}>
+          <SidebarTooltip title="Sandbox" description="PewPew utils - gameplay">
+            <button 
+              onClick={() => toggleTab("sandbox-tab", "Sandbox", "sandbox", DockLocation.LEFT)}
+              className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] ${
+                hasSandbox 
+                  ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+                  : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+              }`}
+            >
+              <RiGamepadLine className="w-5 h-5" />
+            </button>
+          </SidebarTooltip>
 
-        <button 
-          onClick={() => toggleTab("memory-tab", "Memory Tree", "memory", DockLocation.RIGHT)}
-          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mt-2 ${
-            hasMemory 
-              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
-              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
-          }`}
-          title={hasMemory ? "Hide Memory Tree" : "Show Memory Tree"}
-        >
-          {/* <RiNodeTree className="w-5 h-5 mb-3" /> */}
-          {/* <span  */}
-          {/*   className="text-xs uppercase tracking-wider font-semibold"  */}
-          {/*   style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} */}
-          {/* > */}
-          {/*   Memory */}
-          {/* </span> */}
-          <RiNodeTree className="w-5 h-5" />
-        </button>
+          <SidebarTooltip title="Memory Tree" description="Inspect game variables and state structure">
+            <button 
+              onClick={() => toggleTab("memory-tab", "Memory Tree", "memory", DockLocation.RIGHT)}
+              className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mt-2 ${
+                hasMemory 
+                  ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+                  : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+              }`}
+            >
+              <RiNodeTree className="w-5 h-5" />
+            </button>
+          </SidebarTooltip>
 
-        <button 
-          onClick={() => toggleTab("usage-tab", "Memory Usage", "usage", DockLocation.RIGHT)}
-          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mt-2 ${
-            hasUsage 
-              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
-              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
-          }`}
-          title={hasUsage ? "Hide Memory Usage" : "Show Memory Usage"}
-        >
-          <RiLineChartLine className="w-5 h-5" />
-        </button>
+          <SidebarTooltip title="Memory Usage" description="Monitor memory allocations over time">
+            <button 
+              onClick={() => toggleTab("usage-tab", "Memory Usage", "usage", DockLocation.RIGHT)}
+              className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mt-2 ${
+                hasUsage 
+                  ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+                  : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+              }`}
+            >
+              <RiLineChartLine className="w-5 h-5" />
+            </button>
+          </SidebarTooltip>
 
-        <div className="flex-1" />
+          <div className="flex-1" />
 
-        <button 
-          onClick={() => toggleTab("settings-tab", "Settings", "settings", DockLocation.CENTER, true)}
-          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mb-2 ${
-            hasSettings 
-              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
-              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
-          }`}
-          title={hasSettings ? "Hide Settings" : "Show Settings"}
-        >
-          <RiSettings3Line className="w-5 h-5" />
-        </button>
+          <SidebarTooltip title="GitHub Repository" description="View source code or report issues">
+            <a 
+              href="https://github.com/artiekra/pew-debug"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] border-transparent text-[var(--color-border-tab-unselected,gray)] hover:text-[var(--color-text)] hover:bg-white/5"
+            >
+              <RiGithubFill className="w-5 h-5 group-hover:hidden" />
+              <RiExternalLinkLine className="w-5 h-5 hidden group-hover:block" />
+            </a>
+          </SidebarTooltip>
+
+          <SidebarTooltip title="Settings" description="Configure app preferences">
+            <button 
+              onClick={() => toggleTab("settings-tab", "Settings", "settings", DockLocation.CENTER, true)}
+              className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mb-2 ${
+                hasSettings 
+                  ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+                  : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+              }`}
+            >
+              <RiSettings3Line className="w-5 h-5" />
+            </button>
+          </SidebarTooltip>
+        </TooltipProvider>
       </div>
 
       <div className="flex-1 relative h-full">

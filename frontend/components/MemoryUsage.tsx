@@ -1,5 +1,4 @@
 import React from "react";
-import { RiLineChartLine } from "@remixicon/react";
 
 export const MemoryUsage = ({ data }: { data: number[] }) => {
   if (!data || data.length === 0) {
@@ -12,51 +11,88 @@ export const MemoryUsage = ({ data }: { data: number[] }) => {
   }
 
   const currentUsage = data[data.length - 1];
-  const maxUsage = Math.max(...data, currentUsage * 1.5) || 1; // avoid division by zero
+  
+  // Assume 60 updates per second based on requestAnimationFrame
+  const getAverage = (count: number) => {
+    if (data.length === 0) return 0;
+    const slice = data.slice(-count);
+    return slice.reduce((a, b) => a + b, 0) / slice.length;
+  };
+
+  const avg1s = getAverage(60);
+  const avg10s = getAverage(600);
+  const avgAll = getAverage(data.length);
+  const minVal = Math.min(...data);
+  const maxVal = Math.max(...data);
+
+  const getPercent = (val: number) => ((val / 500) * 100);
+  const formatVal = (val: number) => val.toFixed(2);
+  const formatPercent = (val: number) => getPercent(val).toFixed(2);
+
+  const currentPercent = Math.max(0, Math.min(getPercent(currentUsage), 100));
 
   return (
-    <div className="p-6 h-full flex flex-col font-mono bg-black/20 rounded-xl border border-white/5 shadow-inner">
-      <div className="flex items-center gap-2 mb-6 text-emerald-400 drop-shadow-[0_0_2px_rgba(52,211,153,0.4)]">
-        <RiLineChartLine className="w-5 h-5" />
-        <span className="text-lg font-bold tracking-wider uppercase">Memory Usage</span>
+    <div className="p-6 h-full flex flex-col font-mono bg-black/20 rounded-xl border border-white/5 shadow-inner gap-6">
+      {/* Progress Bar */}
+      <div className="relative w-full h-12 bg-white/5 rounded-md overflow-hidden border border-white/10 shrink-0">
+        <div 
+          className="absolute top-0 left-0 h-full bg-emerald-500/80 transition-all duration-100 ease-out"
+          style={{ width: `${currentPercent}%` }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center text-white font-bold drop-shadow-md text-lg tracking-wider">
+          {currentUsage.toFixed(0)} KB
+        </div>
       </div>
 
-      <div className="flex items-end gap-4 mb-8">
-        <span className="text-4xl font-bold text-white tracking-tight">
-          {currentUsage.toFixed(2)}
-        </span>
-        <span className="text-muted-foreground font-semibold mb-1 uppercase tracking-widest text-sm">
-          KB
-        </span>
-      </div>
+      {/* Stats Rows */}
+      <div className="flex flex-col gap-1 text-sm">
+        <div className="flex justify-between items-center p-2">
+          <span className="text-muted-foreground font-semibold">Current Usage</span>
+          <div className="flex gap-4 items-center">
+            <span className="text-emerald-600 font-bold text-base">{formatVal(currentUsage)} KB</span>
+            <span className="text-emerald-600 font-bold w-16 text-right">{formatPercent(currentUsage)}%</span>
+          </div>
+        </div>
 
-      {/* Simple line/bar chart visualization */}
-      <div className="flex-1 min-h-[150px] relative border-b border-l border-white/10 pt-4 pb-0 pl-0">
-        <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
-          <defs>
-            <linearGradient id="usageGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#34d399" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path
-            d={`M 0 100 ` + data.map((v, i) => `L ${(i / Math.max(1, data.length - 1)) * 100} ${100 - (v / maxUsage) * 100}`).join(" ") + ` L 100 100 Z`}
-            fill="url(#usageGradient)"
-          />
-          <polyline
-            points={data.map((v, i) => `${(i / Math.max(1, data.length - 1)) * 100},${100 - (v / maxUsage) * 100}`).join(" ")}
-            fill="none"
-            stroke="#34d399"
-            strokeWidth="2"
-            vectorEffect="non-scaling-stroke"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </svg>
-      </div>
-      <div className="flex justify-between mt-2 text-xs text-muted-foreground/50">
-        <span>Oldest</span>
-        <span>Current</span>
+        <div className="flex justify-between items-center p-2">
+          <span className="text-muted-foreground font-semibold">Average (1s)</span>
+          <div className="flex gap-4 items-center">
+            <span className="text-blue-600 font-bold text-base">{formatVal(avg1s)} KB</span>
+            <span className="text-blue-600 font-bold w-16 text-right">{formatPercent(avg1s)}%</span>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center p-2">
+          <span className="text-muted-foreground font-semibold">Average (10s)</span>
+          <div className="flex gap-4 items-center">
+            <span className="text-purple-600 font-bold text-base">{formatVal(avg10s)} KB</span>
+            <span className="text-purple-600 font-bold w-16 text-right">{formatPercent(avg10s)}%</span>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center p-2">
+          <span className="text-muted-foreground font-semibold">Average (All)</span>
+          <div className="flex gap-4 items-center">
+            <span className="text-red-600 font-bold text-base">{formatVal(avgAll)} KB</span>
+            <span className="text-red-600 font-bold w-16 text-right">{formatPercent(avgAll)}%</span>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center p-2">
+          <span className="text-muted-foreground font-semibold">Minimum</span>
+          <div className="flex gap-4 items-center">
+            <span className="text-cyan-600 font-bold text-base">{formatVal(minVal)} KB</span>
+            <span className="text-cyan-600 font-bold w-16 text-right">{formatPercent(minVal)}%</span>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center p-2">
+          <span className="text-muted-foreground font-semibold">Maximum</span>
+          <div className="flex gap-4 items-center">
+            <span className="text-orange-600 font-bold text-base">{formatVal(maxVal)} KB</span>
+            <span className="text-orange-600 font-bold w-16 text-right">{formatPercent(maxVal)}%</span>
+          </div>
+        </div>
       </div>
     </div>
   );
