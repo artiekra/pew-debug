@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { UploadForm } from "@/components/UploadForm";
 import { SandboxView } from "@/components/SandboxView";
+import { SettingsProvider } from "@/hooks/useSettings";
 
 /** main sandbox component managing the view state. */
 export default function PewPewSandbox() {
@@ -25,7 +26,9 @@ export default function PewPewSandbox() {
           </div>
         ) : (
           <div className="w-full h-full flex-1 bg-[#0A0A0A]">
-            <SandboxView gameUrl={gameUrl} />
+            <SettingsProvider>
+              <SandboxView gameUrl={gameUrl} />
+            </SettingsProvider>
           </div>
         )}
       </div>

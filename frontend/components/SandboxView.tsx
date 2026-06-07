@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
 import { MemoryUsage } from "./MemoryUsage";
-import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine } from "@remixicon/react";
+import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine, RiSettings3Line } from "@remixicon/react";
 import { Layout, Model, TabNode, IJsonModel, Actions, DockLocation } from "flexlayout-react";
+import { SettingsTab } from "./SettingsTab";
 import "flexlayout-react/style/alpha_dark.css";
 
 interface SandboxViewProps {
@@ -70,7 +71,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
   // Continuously track the latest state of all known tabs while they are open
   const jsonModel = model.toJson();
-  const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab"];
+  const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab", "settings-tab"];
   
   useEffect(() => {
     let cbUsage: any = null;
@@ -315,10 +316,14 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       );
     }
 
+    if (component === "settings") {
+      return <SettingsTab />;
+    }
+
     return null;
   };
 
-  const toggleTab = (id: string, name: string, component: string, defaultLocation: DockLocation) => {
+  const toggleTab = (id: string, name: string, component: string, defaultLocation: DockLocation, isFloat: boolean = false) => {
     const node = model.getNodeById(id);
     if (node) {
       model.doAction(Actions.deleteTab(id));
@@ -332,6 +337,31 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           saved.subLayout.layout, 
           saved.subLayout.rect, 
           saved.subLayout.type || "float"
+        ));
+        return;
+      }
+
+      if (!saved && isFloat) {
+        const width = 400;
+        const height = 300;
+        const left = (window.innerWidth - width) / 2;
+        const top = (window.innerHeight - height) / 2;
+        
+        model.doAction(Actions.createSubLayout(
+          {
+            type: "row",
+            weight: 100,
+            children: [
+              {
+                type: "tabset",
+                weight: 100,
+                id: `${id}-tabset`,
+                children: [jsonNode],
+              }
+            ]
+          },
+          { left, top, x: left, y: top, width, height } as any,
+          "float" as any
         ));
         return;
       }
@@ -354,6 +384,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const hasSandbox = !!model.getNodeById("sandbox-tab");
   const hasMemory = !!model.getNodeById("memory-tab");
   const hasUsage = !!model.getNodeById("usage-tab");
+  const hasSettings = !!model.getNodeById("settings-tab");
 
   return (
     <div className="flex w-full h-[100dvh] overflow-hidden bg-[var(--color-background)] text-[var(--color-text)] relative">
@@ -414,6 +445,20 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           title={hasUsage ? "Hide Memory Usage" : "Show Memory Usage"}
         >
           <RiLineChartLine className="w-5 h-5" />
+        </button>
+
+        <div className="flex-1" />
+
+        <button 
+          onClick={() => toggleTab("settings-tab", "Settings", "settings", DockLocation.CENTER, true)}
+          className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mb-2 ${
+            hasSettings 
+              ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+              : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+          }`}
+          title={hasSettings ? "Hide Settings" : "Show Settings"}
+        >
+          <RiSettings3Line className="w-5 h-5" />
         </button>
       </div>
 

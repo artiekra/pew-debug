@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { RiArrowRightSLine, RiArrowDownSLine, RiStarLine, RiStarFill } from "@remixicon/react";
+import { useSettings, Settings } from "@/hooks/useSettings";
 
 /** Helper to get value at path */
 const getValueAtPath = (obj: any, path: string[]) => {
@@ -21,6 +22,7 @@ const JsonNode = ({
   favourites = [],
   onToggleFavourite,
   isFavouriteNode = false,
+  settings,
 }: { 
   nodeKey?: string; 
   value: any;
@@ -28,6 +30,7 @@ const JsonNode = ({
   favourites?: string[][];
   onToggleFavourite?: (path: string[]) => void;
   isFavouriteNode?: boolean;
+  settings: Settings;
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const isMissing = value === undefined;
@@ -39,7 +42,9 @@ const JsonNode = ({
   const isFavourited = favourites.some(f => JSON.stringify(f) === pathString);
 
   const isFunctionString = typeof value === "string" && value.startsWith("function: ");
-  const isColorVariable = nodeKey !== undefined && nodeKey.toLowerCase().includes("color") && typeof value === "number" && Number.isInteger(value);
+  if (isFunctionString && !settings.showFunctions) return null;
+
+  const isColorVariable = settings.formatColors && nodeKey !== undefined && nodeKey.toLowerCase().includes("color") && typeof value === "number" && Number.isInteger(value);
 
   let colorHex = "";
   let textColorClass = "";
@@ -129,6 +134,7 @@ const JsonNode = ({
               path={[...path, k]}
               favourites={favourites}
               onToggleFavourite={onToggleFavourite}
+              settings={settings}
             />
           ))}
         </div>
@@ -139,6 +145,7 @@ const JsonNode = ({
 
 /** displays the live memory state using our recursive node component. */
 export const MemoryTree = ({ data }: { data: any }) => {
+  const settings = useSettings();
   const [favourites, setFavourites] = useState<string[][]>([]);
 
   useEffect(() => {
@@ -198,6 +205,7 @@ export const MemoryTree = ({ data }: { data: any }) => {
                 favourites={favourites}
                 onToggleFavourite={handleToggleFavourite}
                 isFavouriteNode={true}
+                settings={settings}
               />
             ))}
           </div>
@@ -210,6 +218,7 @@ export const MemoryTree = ({ data }: { data: any }) => {
           path={[]} 
           favourites={favourites}
           onToggleFavourite={handleToggleFavourite}
+          settings={settings}
         />
       </div>
     </div>
