@@ -57,7 +57,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
       }
 
       const data = await response.json();
-      onGameUrlReady(`/play/${data.id}/pewpew.html`);
+      onGameUrlReady(data.id);
     } catch (err: any) {
       console.error("upload failed:", err);
       setErrorMsg("Server error! Please try later.");

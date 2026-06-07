@@ -224,36 +224,30 @@ class Instrumenter:
         return tree
 
 
-def instrument_lua_file(code: str, file_id: str) -> str:
+def instrument_lua_file(code: str, file_id: str, mode: str = "dump") -> str:
     """Parse lua code and inject state mirroring code safely."""
     code_for_ast = re.sub(r'(?<![a-zA-Z_])([0-9]*\.?[0-9]+)fx\b', r'__FX__("\1")', code)
-    try:
-        tree = ast.parse(code_for_ast)
-    except Exception as e:
-        print(f"Failed to parse lua code: {e}")
-        return code
-
-    instrumenter = Instrumenter(file_id)
-    tree = instrumenter.transform(tree)
-
-    def escape_key(k):
-        return k.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-
-    init_lines = [
-        "_G.telemetryState = _G.telemetryState or {}",
-        "collectgarbage('collect')",
-        "local __memBefore = collectgarbage('count')"
-    ]
-    for key in sorted(instrumenter.all_keys):
-        init_lines.append(f"_G.telemetryState[\"{escape_key(key)}\"] = \"#NIL#\"")
-        
-    init_lines.extend([
-        "collectgarbage('collect')",
-        "local __staticOffset = collectgarbage('count') - __memBefore",
-        "_G.__telemetryStaticOffset = (_G.__telemetryStaticOffset or 0) + __staticOffset"
-    ])
     
-    interceptor_payload = """
+    if mode == "dump":
+        try:
+            tree = ast.parse(code_for_ast)
+        except Exception as e:
+            print(f"Failed to parse lua code: {e}")
+            return code
+
+        instrumenter = Instrumenter(file_id)
+        tree = instrumenter.transform(tree)
+
+        def escape_key(k):
+            return k.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+
+        init_lines = [
+            "_G.telemetryState = _G.telemetryState or {}",
+        ]
+        for key in sorted(instrumenter.all_keys):
+            init_lines.append(f"_G.telemetryState[\"{escape_key(key)}\"] = \"#NIL#\"")
+            
+        interceptor_payload = """
 if not _G.__telemetry_installed then
     _G.__baseline_G = {}
     for k, v in pairs(_G) do _G.__baseline_G[k] = true end
@@ -299,6 +293,42 @@ if not _G.__telemetry_installed then
                             print_node(1, "Globals:" .. k, nil, nil, nil, nil, v)
                         end
                     end
+                    print("__MEM_DUMP_END__")
+                end
+            end)
+        end
+    end
+end
+"""
+
+        out_code = ast.to_lua_source(tree)
+        out_code = re.sub(r'__FX__\("([0-9]*\.?[0-9]+)"\)', r'\1fx', out_code)
+        
+        init_code = "\n".join(init_lines)
+        return init_code + "\n" + interceptor_payload + "\n" + out_code
+    
+    elif mode == "usage":
+        init_lines = [
+            "collectgarbage('collect')",
+            "local __memBefore = collectgarbage('count')",
+            "collectgarbage('collect')",
+            "local __staticOffset = collectgarbage('count') - __memBefore",
+            "_G.__telemetryStaticOffset = (_G.__telemetryStaticOffset or 0) + __staticOffset"
+        ]
+        interceptor_payload = """
+if not _G.__telemetry_installed_usage then
+    _G.__telemetry_installed_usage = true
+    local __orig_update = pewpew.add_update_callback
+    if __orig_update then
+        pewpew.add_update_callback = function(user_callback)
+            local __tick_count = 0
+            __orig_update(function()
+                __tick_count = __tick_count + 1
+                local is_report_tick = (__tick_count % 15 == 0)
+                
+                user_callback()
+                
+                if is_report_tick then
                     local current_mem = collectgarbage("count")
                     local adjusted_mem = current_mem - (_G.__telemetryStaticOffset or 0)
                     print("__MEM_USAGE__", adjusted_mem)
@@ -308,22 +338,18 @@ if not _G.__telemetry_installed then
     end
 end
 """
-
-    out_code = ast.to_lua_source(tree)
-    out_code = re.sub(r'__FX__\("([0-9]*\.?[0-9]+)"\)', r'\1fx', out_code)
-    
-    init_code = "\n".join(init_lines)
-    return init_code + "\n" + interceptor_payload + "\n" + out_code
+        init_code = "\n".join(init_lines)
+        return init_code + "\n" + interceptor_payload + "\n" + code
 
 
-def process_file(file_path: Path, destination: Path, file_id: str) -> None:
+def process_file(file_path: Path, destination: Path, file_id: str, mode: str = "dump") -> None:
     """Instruments a lua file or copies assets directly."""
     try:
         with open(file_path, "r", encoding="utf-8") as f_in:
             original_content = f_in.read()
 
         if file_path.suffix == ".lua":
-            original_content = instrument_lua_file(original_content, file_id)
+            original_content = instrument_lua_file(original_content, file_id, mode)
 
         with open(destination, "w", encoding="utf-8") as f_out:
             f_out.write(original_content)

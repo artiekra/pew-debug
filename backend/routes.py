@@ -17,30 +17,37 @@ async def process_folder(files: list[UploadFile] = File(...)) -> dict[str, str]:
     """Inject debugging code into user level and setup symlinks."""
     folder_id = str(uuid.uuid4())[:8]
     base_dir = Path("storage")
-    output_dir = base_dir / folder_id
-
-    levels_dir = output_dir / "levels"
-    levels_dir.mkdir(parents=True, exist_ok=True)
-
+    
+    dump_dir = base_dir / f"{folder_id}_dump"
+    usage_dir = base_dir / f"{folder_id}_usage"
+    
     utils_dir = Path("utils")
-    copy_utils(output_dir, utils_dir)
+    for d in [dump_dir, usage_dir]:
+        levels_dir = d / "levels"
+        levels_dir.mkdir(parents=True, exist_ok=True)
+        copy_utils(d, utils_dir)
 
     for file in files:
         safe_path = Path(file.filename.lstrip("/"))
         if ".." in safe_path.parts:
             continue
 
-        nested_dir = levels_dir / safe_path.parent
-        nested_dir.mkdir(parents=True, exist_ok=True)
-
-        temp_file_path = nested_dir / f"temp_{safe_path.name}"
-        destination = nested_dir / safe_path.name
-
+        temp_file_path = base_dir / f"temp_{uuid.uuid4().hex}_{safe_path.name}"
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
         file_id = str(safe_path.with_suffix("")).replace("/", "_").replace("\\", "_")
-        process_file(temp_file_path, destination, file_id)
+        
+        # process for dump
+        dump_dest = dump_dir / "levels" / safe_path.parent / safe_path.name
+        dump_dest.parent.mkdir(parents=True, exist_ok=True)
+        process_file(temp_file_path, dump_dest, file_id, mode="dump")
+        
+        # process for usage
+        usage_dest = usage_dir / "levels" / safe_path.parent / safe_path.name
+        usage_dest.parent.mkdir(parents=True, exist_ok=True)
+        process_file(temp_file_path, usage_dest, file_id, mode="usage")
+        
         temp_file_path.unlink()
 
     return {"id": folder_id}

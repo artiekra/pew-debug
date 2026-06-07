@@ -138,6 +138,12 @@
       onclick="window.focus()"></canvas>
   </div>
 
+  <script>
+    if (window.parent && window.parent !== window && window.parent.registerIframe) {
+      window.parent.registerIframe(window, document.getElementById('canvas'));
+    }
+  </script>
+
   <script type='text/javascript'>
 
     // Workaround emscripten limitation to change the canvas'

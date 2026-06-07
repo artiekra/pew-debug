@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
 import { MemoryUsage } from "./MemoryUsage";
@@ -72,6 +72,69 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const jsonModel = model.toJson();
   const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab"];
   
+  useEffect(() => {
+    let cbUsage: any = null;
+    let cbDump: any = null;
+    let usageWin: any = null;
+    let dumpWin: any = null;
+    let usageCanvas: any = null;
+    let dumpCanvas: any = null;
+
+    const tryTick = () => {
+      if (cbUsage && cbDump) {
+        const u = cbUsage;
+        const d = cbDump;
+        cbUsage = null;
+        cbDump = null;
+        window.requestAnimationFrame((now) => {
+          u(now);
+          d(now);
+        });
+      }
+    };
+
+    (window as any).registerIframe = (win: any, canvas: any) => {
+      const isUsage = win.location.href.includes('_usage');
+      if (isUsage) {
+        usageWin = win;
+        usageCanvas = canvas;
+        
+        win.requestAnimationFrame = (cb: any) => {
+          cbUsage = cb;
+          tryTick();
+          return 1;
+        };
+
+        const events = ['keydown', 'keyup', 'mousedown', 'mouseup', 'mousemove', 'wheel', 'touchstart', 'touchend', 'touchmove', 'keypress'];
+        events.forEach(type => {
+          win.addEventListener(type, (e: any) => {
+            if (dumpWin) {
+              const dumpEvent = new dumpWin[e.constructor.name](e.type, e);
+              if (e.target === canvas && dumpCanvas) {
+                dumpCanvas.dispatchEvent(dumpEvent);
+              } else {
+                dumpWin.dispatchEvent(dumpEvent);
+              }
+            }
+          }, true);
+        });
+      } else {
+        dumpWin = win;
+        dumpCanvas = canvas;
+        
+        win.requestAnimationFrame = (cb: any) => {
+          cbDump = cb;
+          tryTick();
+          return 1;
+        };
+      }
+    };
+
+    return () => {
+      delete (window as any).registerIframe;
+    };
+  }, []);
+
   currentTabIds.forEach(id => {
     const node = model.getNodeById(id);
     if (node) {
@@ -120,7 +183,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
               return [...prev, usageNum];
             });
           }
-          // Tick ended, commit state
+        } else if (logLine.includes("__MEM_DUMP_END__")) {
           setMemoryState(currentTickState);
           currentTickState = {}; // reset for next tick
         } else if (logLine.includes("[V]")) {
@@ -208,10 +271,16 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
             Exit Sandbox
           </Button>
           <iframe 
-            src={gameUrl} 
+            src={`/play/${gameUrl}_usage/pewpew.html`} 
             onLoad={handleIframeLoad}
-            className="w-full h-full border-none"
-            title="pewpew sandbox"
+            className="w-full h-full border-none relative z-10"
+            title="pewpew usage sandbox"
+          />
+          <iframe 
+            src={`/play/${gameUrl}_dump/pewpew.html`} 
+            onLoad={handleIframeLoad}
+            className="w-full h-full border-none absolute top-0 left-0 opacity-0 pointer-events-none z-0"
+            title="pewpew dump sandbox"
           />
         </div>
       );
