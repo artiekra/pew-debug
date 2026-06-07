@@ -106,6 +106,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       if (!targetWindow) return;
 
       const originalLog = targetWindow.console.log;
+      let currentTickState: any = {};
 
       // overwrite the sandbox's console
       targetWindow.console.log = (...args: any[]) => {
@@ -118,6 +119,49 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
             setMemoryUsage(prev => {
               return [...prev, usageNum];
             });
+          }
+          // Tick ended, commit state
+          setMemoryState(currentTickState);
+          currentTickState = {}; // reset for next tick
+        } else if (logLine.includes("[V]")) {
+          const vIndex = logLine.indexOf("[V]");
+          const afterV = logLine.substring(vIndex + 3).trim();
+          const firstSpace = afterV.search(/\s/);
+          if (firstSpace !== -1) {
+             const depthStr = afterV.substring(0, firstSpace);
+             const depth = parseInt(depthStr);
+             if (!isNaN(depth) && depth >= 1 && depth <= 5) {
+                 const limit = depth + 1;
+                 const regex = new RegExp("^" + Array(limit).fill("(\\S+)").join("\\s+") + "(?:\\s+([\\s\\S]*))?$");
+                 const match = afterV.match(regex);
+                 if (match) {
+                     const keys = match.slice(2, limit + 1);
+                     const valStr = match[limit + 1] || "";
+                     let val: any = valStr;
+
+                     if (valStr === "#NIL#") return;
+
+                     if (valStr === "true") val = true;
+                     else if (valStr === "false") val = false;
+                     else if (valStr === "nil") val = null;
+                     else if (!isNaN(Number(valStr)) && valStr.trim() !== "") val = Number(valStr);
+                     
+                     const rootParts = keys[0].split(':');
+                     if (rootParts.length >= 4) {
+                         rootParts[3] = rootParts[3].replace(/_\d+$/, '');
+                     }
+                     const fullPath = [...rootParts, ...keys.slice(1)];
+                     
+                     let current = currentTickState;
+                     for (let i = 0; i < fullPath.length - 1; i++) {
+                         if (!current[fullPath[i]] || typeof current[fullPath[i]] !== 'object') {
+                             current[fullPath[i]] = {};
+                         }
+                         current = current[fullPath[i]];
+                     }
+                     current[fullPath[fullPath.length - 1]] = val;
+                 }
+             }
           }
         } else if (logLine.includes("__MEM__")) {
           try {
