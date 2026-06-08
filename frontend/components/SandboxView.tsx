@@ -128,16 +128,61 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           return 1;
         };
 
-        const events = ['keydown', 'keyup', 'mousedown', 'mouseup', 'mousemove', 'wheel', 'touchstart', 'touchend', 'touchmove', 'keypress'];
+        const events = [
+          'keydown', 'keyup', 'keypress',
+          'mousedown', 'mouseup', 'mousemove', 'mouseenter', 'mouseleave', 'mouseover', 'mouseout', 'contextmenu',
+          'wheel', 
+          'touchstart', 'touchend', 'touchmove', 'touchcancel',
+          'pointerdown', 'pointerup', 'pointermove', 'pointerenter', 'pointerleave', 'pointerover', 'pointerout', 'pointercancel',
+          'blur', 'focus'
+        ];
         events.forEach(type => {
           win.addEventListener(type, (e: any) => {
+            if (type === "pointerdown") {
+              try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
+            }
+            if (type === "pointerup" || type === "pointercancel") {
+              try {
+                if (e.target.hasPointerCapture(e.pointerId)) {
+                  e.target.releasePointerCapture(e.pointerId);
+                }
+              } catch(err) {}
+            }
+
             if (dumpWin) {
+              const targetMap = new Map<any, any>([
+                [usageWin, dumpWin],
+                [usageCanvas, dumpCanvas],
+                [usageWin.document, dumpWin.document],
+                [usageWin.document.body, dumpWin.document.body],
+                [usageWin.document.documentElement, dumpWin.document.documentElement]
+              ]);
+
               const dumpEvent = new dumpWin[e.constructor.name](e.type, e);
-              if (e.target === canvas && dumpCanvas) {
-                dumpCanvas.dispatchEvent(dumpEvent);
-              } else {
-                dumpWin.dispatchEvent(dumpEvent);
+              
+              let currentObj = e;
+              const props = new Set<string>();
+              while (currentObj && currentObj !== Object.prototype) {
+                Object.getOwnPropertyNames(currentObj).forEach(p => props.add(p));
+                currentObj = Object.getPrototypeOf(currentObj);
               }
+              
+              props.forEach(key => {
+                if (key === 'target' || key === 'currentTarget' || key === 'srcElement' || key === 'path' || key === 'composedPath') return;
+                if (typeof e[key] !== 'function') {
+                  try {
+                    Object.defineProperty(dumpEvent, key, { 
+                      get: () => {
+                        let val = e[key];
+                        return targetMap.has(val) ? targetMap.get(val) : val;
+                      } 
+                    });
+                  } catch (err) {}
+                }
+              });
+
+              let dispatchTarget = targetMap.get(e.target) || dumpWin;
+              dispatchTarget.dispatchEvent(dumpEvent);
             }
           }, true);
         });
