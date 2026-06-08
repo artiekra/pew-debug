@@ -1,4 +1,4 @@
-let currentTickState: any = {};
+let memoryBuffer = "";
 
 self.addEventListener("message", (e) => {
   const { type, line } = e.data;
@@ -26,49 +26,29 @@ self.addEventListener("message", (e) => {
         }
       } else if (line.includes("__LEVEL_START__")) {
         self.postMessage({ type: "level_start" });
-      } else if (line.includes("__MEM_DUMP_END__")) {
-        self.postMessage({ type: "memory_state", state: currentTickState });
-        currentTickState = {}; // reset for next tick
-      } else if (line.includes("[V]")) {
-        const vIndex = line.indexOf("[V]");
-        const afterV = line.substring(vIndex + 3).trim();
-        const firstSpace = afterV.search(/\s/);
-        if (firstSpace !== -1) {
-          const depthStr = afterV.substring(0, firstSpace);
-          const depth = parseInt(depthStr);
-          if (!isNaN(depth) && depth >= 1 && depth <= 5) {
-            const limit = depth + 1;
-            const regex = new RegExp("^" + Array(limit).fill("(\\S+)").join("\\s+") + "(?:\\s+([\\s\\S]*))?$");
-            const match = afterV.match(regex);
-            if (match) {
-              const keys = match.slice(2, limit + 1);
-              const valStr = match[limit + 1] || "";
-              let val: any = valStr;
-
-              if (valStr === "#NIL#") return;
-
-              if (valStr === "true") val = true;
-              else if (valStr === "false") val = false;
-              else if (valStr === "nil") val = null;
-              else if (!isNaN(Number(valStr)) && valStr.trim() !== "") val = Number(valStr);
-
-              const rootParts = keys[0].split(":");
-              if (rootParts.length >= 4) {
-                rootParts[3] = rootParts[3].replace(/_\d+$/, "");
-              }
-              const fullPath = [...rootParts, ...keys.slice(1)];
-
-              let current = currentTickState;
-              for (let i = 0; i < fullPath.length - 1; i++) {
-                if (!current[fullPath[i]] || typeof current[fullPath[i]] !== "object") {
-                  current[fullPath[i]] = {};
-                }
-                current = current[fullPath[i]];
-              }
-              current[fullPath[fullPath.length - 1]] = val;
+      } else if (line.includes("__MEM_START__")) {
+        const jsonStartIndex = line.indexOf("__MEM_START__") + 13;
+        memoryBuffer = line.substring(jsonStartIndex);
+      } else if (line.includes("__MEM_PART__")) {
+        const jsonStartIndex = line.indexOf("__MEM_PART__") + 12;
+        memoryBuffer += line.substring(jsonStartIndex);
+      } else if (line.includes("__MEM_END__")) {
+        const jsonStartIndex = line.indexOf("__MEM_END__") + 11;
+        memoryBuffer += line.substring(jsonStartIndex);
+        try {
+          let jsonStr = memoryBuffer;
+          jsonStr = jsonStr.replace(/"(?:[^"\\]|\\.)*"|(-?\d+(?:\.\d+)?)fx/g, (match: string, fxGroup: string) => {
+            if (fxGroup !== undefined) {
+              return `{"__fx":"${fxGroup}"}`;
             }
-          }
+            return match;
+          });
+          const state = JSON.parse(jsonStr);
+          self.postMessage({ type: "memory_state", state });
+        } catch (err) {
+          self.postMessage({ type: "parse_error", line: "buffered_mem", error: String(err) });
         }
+        memoryBuffer = "";
       } else if (line.includes("__MEM__")) {
         try {
           const jsonStartIndex = line.indexOf("__MEM__") + 7;

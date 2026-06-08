@@ -287,8 +287,9 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
         const isInternal = logLine.includes("__MEM_USAGE__") || 
                            logLine.includes("__TICK_DATA__") || 
                            logLine.includes("__LEVEL_START__") || 
-                           logLine.includes("__MEM_DUMP_END__") || 
-                           logLine.includes("[V]") || 
+                           logLine.includes("__MEM_START__") || 
+                           logLine.includes("__MEM_PART__") || 
+                           logLine.includes("__MEM_END__") || 
                            logLine.includes("__MEM__");
 
         if (isInternal) {

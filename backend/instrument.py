@@ -268,36 +268,83 @@ if not _G.__telemetry_installed then
                     print("__TICK_DATA__", __tick_count, #entities)
  
                     local seen = {}
-                    local function print_node(depth, k1, k2, k3, k4, k5, v)
-                        if type(v) ~= "table" then
-                            if depth == 1 then print("[V]", 1, k1, v)
-                            elseif depth == 2 then print("[V]", 2, k1, k2, v)
-                            elseif depth == 3 then print("[V]", 3, k1, k2, k3, v)
-                            elseif depth == 4 then print("[V]", 4, k1, k2, k3, k4, v)
-                            else print("[V]", 5, k1, k2, k3, k4, k5, v) end
-                        else
-                            if seen[v] then return end
-                            seen[v] = true
-                            for sub_k, sub_v in pairs(v) do
-                                if type(sub_k) ~= "function" and type(sub_v) ~= "function" then
-                                    if depth == 1 then print_node(2, k1, sub_k, nil, nil, nil, sub_v)
-                                    elseif depth == 2 then print_node(3, k1, k2, sub_k, nil, nil, sub_v)
-                                    elseif depth == 3 then print_node(4, k1, k2, k3, sub_k, nil, sub_v)
-                                    elseif depth == 4 then print_node(5, k1, k2, k3, k4, sub_k, sub_v)
+                    local function to_json(val)
+                        local t = type(val)
+                        if t == "string" then
+                            local escaped = val:gsub("\\\\", "\\\\\\\\"):gsub('"', '\\\\"'):gsub("\\n", "\\\\n"):gsub("\\r", "")
+                            return '"' .. escaped .. '"'
+                        elseif t == "number" or t == "boolean" then
+                            return tostring(val)
+                        elseif t == "nil" then
+                            return "null"
+                        elseif t == "function" or t == "userdata" or t == "thread" then
+                            return '"' .. tostring(val) .. '"'
+                        elseif t == "table" then
+                            if seen[val] then return nil end
+                            seen[val] = true
+                            
+                            local res = {}
+                            for k, v in pairs(val) do
+                                if type(k) == "string" or type(k) == "number" or type(k) == "boolean" then
+                                    local key_str
+                                    if type(k) == "string" then
+                                        key_str = '"' .. k:gsub("\\\\", "\\\\\\\\"):gsub('"', '\\\\"'):gsub("\\n", "\\\\n"):gsub("\\r", "") .. '"'
+                                    else
+                                        key_str = '"' .. tostring(k):gsub('"', '\\\\"') .. '"'
+                                    end
+                                    local val_json = to_json(v)
+                                    if val_json ~= nil then
+                                        table.insert(res, key_str .. ":" .. val_json)
                                     end
                                 end
                             end
+                            return "{" .. table.concat(res, ",") .. "}"
+                        else
+                            return '"#UNSUPPORTED#"'
                         end
                     end
+
+                    local dump = { Locals = {}, Globals = {} }
                     for k, v in pairs(_G.telemetryState or {}) do
-                        print_node(1, "Locals:" .. k, nil, nil, nil, nil, v)
+                        if v ~= "#NIL#" then
+                            local parts = {}
+                            for part in k:gmatch("[^:]+") do table.insert(parts, part) end
+                            if #parts >= 4 then parts[4] = parts[4]:gsub("_%d+$", "") end
+                            
+                            local current = dump.Locals
+                            for i = 1, #parts - 1 do
+                                local p = parts[i]
+                                if type(current[p]) ~= "table" then current[p] = {} end
+                                current = current[p]
+                            end
+                            current[parts[#parts]] = v
+                        end
                     end
                     for k, v in pairs(_G) do
                         if not _G.__baseline_G[k] and k ~= "telemetryState" and type(k) == "string" and not k:match("^__") then
-                            print_node(1, "Globals:" .. k, nil, nil, nil, nil, v)
+                            if v ~= "#NIL#" then
+                                dump.Globals[k] = v
+                            end
                         end
                     end
-                    print("__MEM_DUMP_END__")
+                    
+                    local json_str = to_json(dump)
+                    
+                    local chunk_size = 3000
+                    if #json_str <= chunk_size then
+                        print("__MEM__" .. json_str)
+                    else
+                        for i = 1, #json_str, chunk_size do
+                            local chunk = json_str:sub(i, i + chunk_size - 1)
+                            if i == 1 then
+                                print("__MEM_START__" .. chunk)
+                            elseif i + chunk_size - 1 >= #json_str then
+                                print("__MEM_END__" .. chunk)
+                            else
+                                print("__MEM_PART__" .. chunk)
+                            end
+                        end
+                    end
                 end
             end)
         end
