@@ -12,15 +12,14 @@ export const MemoryUsage = ({ data }: { data: number[] }) => {
 
   const currentUsage = data[data.length - 1];
   
-  // Assume 60 updates per second based on requestAnimationFrame
   const getAverage = (count: number) => {
     if (data.length === 0) return 0;
     const slice = data.slice(-count);
     return slice.reduce((a, b) => a + b, 0) / slice.length;
   };
 
-  const avg1s = getAverage(60);
-  const avg10s = getAverage(600);
+  const avg1s = getAverage(2);
+  const avg10s = getAverage(20);
   const avgAll = getAverage(data.length);
   const minVal = Math.min(...data);
   const maxVal = Math.max(...data);
@@ -29,23 +28,50 @@ export const MemoryUsage = ({ data }: { data: number[] }) => {
   const formatVal = (val: number) => val.toFixed(2);
   const formatPercent = (val: number) => getPercent(val).toFixed(2);
 
-  const currentPercent = Math.max(0, Math.min(getPercent(currentUsage), 100));
+  // Chart calculation
+  const chartData = data;
+  const chartMax = Math.max(...chartData, 10) * 1.1; 
+  const range = chartMax;
+
+  const points = chartData.map((val, i) => {
+    const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 100;
+    const y = 100 - (val / range) * 100;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
 
   return (
     <div className="p-6 h-full flex flex-col font-mono bg-black/20 rounded-xl border border-white/5 shadow-inner gap-6">
-      {/* Progress Bar */}
-      <div className="relative w-full h-12 bg-white/5 rounded-md overflow-hidden border border-white/10 shrink-0">
-        <div 
-          className="absolute top-0 left-0 h-full bg-emerald-500/80 transition-all duration-100 ease-out"
-          style={{ width: `${currentPercent}%` }}
-        />
-        <div className="absolute inset-0 flex items-center justify-center text-white font-bold drop-shadow-md text-lg tracking-wider">
-          {currentUsage.toFixed(0)} KB
+      {/* Memory Chart */}
+      <div className="relative w-full h-20 bg-white/5 rounded-md overflow-hidden border border-white/10 shrink-0">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full opacity-80">
+          {chartData.length > 1 && (
+            <>
+              <polygon
+                points={`${points} 100,100 0,100`}
+                fill="rgb(16 185 129)"
+                className="opacity-20"
+              />
+              <polyline
+                points={points}
+                fill="none"
+                stroke="rgb(16 185 129)"
+                strokeWidth="2"
+                vectorEffect="non-scaling-stroke"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </>
+          )}
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span className="text-white font-bold drop-shadow-md text-lg tracking-wider bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
+            {currentUsage.toFixed(0)} KB
+          </span>
         </div>
       </div>
 
       {/* Stats Rows */}
-      <div className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col text-sm">
         <div className="flex justify-between items-center p-2">
           <span className="text-muted-foreground font-semibold">Current Usage</span>
           <div className="flex gap-4 items-center">

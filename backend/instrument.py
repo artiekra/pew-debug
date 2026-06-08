@@ -334,13 +334,15 @@ end
         return interceptor_payload + "\n" + code
 
 
-def process_file(file_path: Path, destination: Path, file_id: str, mode: str = "dump") -> None:
+def process_file(file_path: Path, destination: Path, file_id: str, name: str, mode: str = "dump") -> None:
     """Instruments a lua file or copies assets directly."""
     try:
         with open(file_path, "r", encoding="utf-8") as f_in:
             original_content = f_in.read()
 
         if file_path.suffix == ".lua":
+            if name == "level.lua":
+                original_content = 'print("__LEVEL_START__")\n' + original_content
             original_content = instrument_lua_file(original_content, file_id, mode)
 
         with open(destination, "w", encoding="utf-8") as f_out:

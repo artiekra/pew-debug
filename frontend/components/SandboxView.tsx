@@ -251,6 +251,8 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
               return [...prev, usageNum];
             });
           }
+        } else if (logLine.includes("__LEVEL_START__")) {
+          setMemoryUsage([]);
         } else if (logLine.includes("__MEM_DUMP_END__")) {
           setMemoryState(currentTickState);
           currentTickState = {}; // reset for next tick

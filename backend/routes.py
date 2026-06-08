@@ -41,12 +41,12 @@ async def process_folder(files: list[UploadFile] = File(...)) -> dict[str, str]:
         # process for dump
         dump_dest = dump_dir / "levels" / safe_path.parent / safe_path.name
         dump_dest.parent.mkdir(parents=True, exist_ok=True)
-        process_file(temp_file_path, dump_dest, file_id, mode="dump")
+        process_file(temp_file_path, dump_dest, file_id, safe_path.name, mode="dump")
         
         # process for usage
         usage_dest = usage_dir / "levels" / safe_path.parent / safe_path.name
         usage_dest.parent.mkdir(parents=True, exist_ok=True)
-        process_file(temp_file_path, usage_dest, file_id, mode="usage")
+        process_file(temp_file_path, usage_dest, file_id, safe_path.name, mode="usage")
         
         temp_file_path.unlink()
 
