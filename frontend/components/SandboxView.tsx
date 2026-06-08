@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
 import { MemoryUsage } from "./MemoryUsage";
+import { ConsoleTab, ConsoleMessage } from "./ConsoleTab";
 import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine, RiSettings3Line, RiGithubFill, RiExternalLinkLine } from "@remixicon/react";
 import { Layout, Model, TabNode, IJsonModel, Actions, DockLocation } from "flexlayout-react";
 import { SettingsTab } from "./SettingsTab";
@@ -58,6 +59,12 @@ const DEFAULT_LAYOUT: IJsonModel = {
             name: "Memory Usage",
             component: "usage",
           },
+          {
+            type: "tab",
+            id: "console-tab",
+            name: "Console",
+            component: "console",
+          },
         ],
       },
     ],
@@ -80,6 +87,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const [memoryState, setMemoryState] = useState<any>(null);
   const [memoryUsage, setMemoryUsage] = useState<number[]>([]);
   const [tickData, setTickData] = useState<{tick: number, enemies: number} | null>(null);
+  const [consoleLogs, setConsoleLogs] = useState<ConsoleMessage[]>([]);
   const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT));
   const [, forceUpdate] = useState({});
   const tabStatesRef = React.useRef<Record<string, any>>({});
@@ -87,7 +95,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
   // Continuously track the latest state of all known tabs while they are open
   const jsonModel = model.toJson();
-  const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab", "settings-tab"];
+  const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab", "console-tab", "settings-tab"];
   
   useEffect(() => {
     let cbUsage: any = null;
@@ -240,6 +248,9 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       if (!targetWindow) return;
 
       const originalLog = targetWindow.console.log;
+      const originalWarn = targetWindow.console.warn;
+      const originalError = targetWindow.console.error;
+      const originalInfo = targetWindow.console.info;
       let currentTickState: any = {};
 
       // overwrite the sandbox's console
@@ -335,8 +346,28 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
         } else {
           // pass normal logs through
           originalLog.apply(targetWindow.console, args);
+          setConsoleLogs(prev => [...prev.slice(-999), { type: "log", message: args.join(" ") }]);
         }
       };
+
+      if (originalWarn) {
+        targetWindow.console.warn = (...args: any[]) => {
+          originalWarn.apply(targetWindow.console, args);
+          setConsoleLogs(prev => [...prev.slice(-999), { type: "warn", message: args.join(" ") }]);
+        };
+      }
+      if (originalError) {
+        targetWindow.console.error = (...args: any[]) => {
+          originalError.apply(targetWindow.console, args);
+          setConsoleLogs(prev => [...prev.slice(-999), { type: "error", message: args.join(" ") }]);
+        };
+      }
+      if (originalInfo) {
+        targetWindow.console.info = (...args: any[]) => {
+          originalInfo.apply(targetWindow.console, args);
+          setConsoleLogs(prev => [...prev.slice(-999), { type: "info", message: args.join(" ") }]);
+        };
+      }
     } catch (err) {
       console.warn("could not hook into iframe console. check cors/proxy setup.", err);
     }
@@ -428,6 +459,10 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       );
     }
 
+    if (component === "console") {
+      return <ConsoleTab logs={consoleLogs} />;
+    }
+
     if (component === "settings") {
       return <SettingsTab />;
     }
@@ -496,6 +531,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const hasSandbox = !!model.getNodeById("sandbox-tab");
   const hasMemory = !!model.getNodeById("memory-tab");
   const hasUsage = !!model.getNodeById("usage-tab");
+  const hasConsole = !!model.getNodeById("console-tab");
   const hasSettings = !!model.getNodeById("settings-tab");
 
   return (
@@ -546,6 +582,19 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
               }`}
             >
               <RiLineChartLine className="w-5 h-5" />
+            </button>
+          </SidebarTooltip>
+
+          <SidebarTooltip title="Console" description="View dev tools console output">
+            <button 
+              onClick={() => toggleTab("console-tab", "Console", "console", DockLocation.RIGHT)}
+              className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mt-2 ${
+                hasConsole 
+                  ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+                  : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+              }`}
+            >
+              <RiTerminalLine className="w-5 h-5" />
             </button>
           </SidebarTooltip>
 
