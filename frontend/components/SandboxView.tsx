@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { MemoryTree } from "./MemoryTree";
 import { MemoryUsage } from "./MemoryUsage";
 import { ConsoleTab, ConsoleMessage } from "./ConsoleTab";
-import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine, RiSettings3Line, RiGithubFill, RiExternalLinkLine } from "@remixicon/react";
+import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChartLine, RiSettings3Line, RiGithubFill, RiExternalLinkLine, RiSpeedUpLine } from "@remixicon/react";
 import { Layout, Model, TabNode, IJsonModel, Actions, DockLocation } from "flexlayout-react";
+import { SpeedhackTab } from "./SpeedhackTab";
 import { SettingsTab } from "./SettingsTab";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSettings } from "@/hooks/useSettings";
@@ -87,10 +88,16 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const tabStatesRef = React.useRef<Record<string, any>>({});
   const workerRef = React.useRef<Worker | null>(null);
   const { showDebugInfo } = useSettings();
+  const [speedhackMultiplier, setSpeedhackMultiplier] = useState<number>(1);
+  const speedRef = React.useRef(1);
+
+  useEffect(() => {
+    speedRef.current = speedhackMultiplier;
+  }, [speedhackMultiplier]);
 
   // Continuously track the latest state of all known tabs while they are open
   const jsonModel = model.toJson();
-  const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab", "console-tab", "settings-tab"];
+  const currentTabIds = ["sandbox-tab", "memory-tab", "usage-tab", "console-tab", "settings-tab", "speedhack-tab"];
   
   useEffect(() => {
     workerRef.current = new Worker(new URL('../workers/logParser.worker.ts', import.meta.url));
@@ -123,7 +130,8 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
         const d = cbDump;
         cbUsage = null;
         cbDump = null;
-        window.requestAnimationFrame((now) => {
+        
+        const executeTick = (now: number) => {
           const dt = 1000 / 60;
           if (usageWin) {
             usageWin.virtualTime += dt;
@@ -135,7 +143,13 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           }
           u(usageWin ? usageWin.perfTime : now);
           d(dumpWin ? dumpWin.perfTime : now);
-        });
+        };
+
+        if (speedRef.current === 1) {
+          window.requestAnimationFrame(executeTick);
+        } else {
+          setTimeout(() => executeTick(performance.now()), 1000 / (60 * speedRef.current));
+        }
       }
     };
 
@@ -403,6 +417,10 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       return <SettingsTab />;
     }
 
+    if (component === "speedhack") {
+      return <SpeedhackTab speed={speedhackMultiplier} setSpeed={setSpeedhackMultiplier} />;
+    }
+
     return null;
   };
 
@@ -469,6 +487,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const hasUsage = !!model.getNodeById("usage-tab");
   const hasConsole = !!model.getNodeById("console-tab");
   const hasSettings = !!model.getNodeById("settings-tab");
+  const hasSpeedhack = !!model.getNodeById("speedhack-tab");
 
   return (
     <div className="flex w-full h-[100dvh] overflow-hidden bg-[var(--color-background)] text-[var(--color-text)] relative">
@@ -546,6 +565,19 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
               <RiGithubFill className="w-5 h-5 group-hover:hidden" />
               <RiExternalLinkLine className="w-5 h-5 hidden group-hover:block" />
             </a>
+          </SidebarTooltip>
+
+          <SidebarTooltip title="Speedhack" description="Control game execution speed">
+            <button 
+              onClick={() => toggleTab("speedhack-tab", "Speedhack", "speedhack", DockLocation.CENTER, true)}
+              className={`flex flex-col items-center py-2 w-full transition-colors duration-150 border-l-[3px] mb-2 ${
+                hasSpeedhack 
+                  ? "bg-[var(--color-border-tab-selected-background,transparent)]" 
+                  : "text-[var(--color-border-tab-unselected,gray)] border-transparent hover:text-[var(--color-text)] hover:bg-white/5"
+              }`}
+            >
+              <RiSpeedUpLine className="w-5 h-5" />
+            </button>
           </SidebarTooltip>
 
           <SidebarTooltip title="Settings" description="Configure app preferences">
