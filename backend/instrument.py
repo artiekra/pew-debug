@@ -308,13 +308,6 @@ end
         return init_code + "\n" + interceptor_payload + "\n" + out_code
     
     elif mode == "usage":
-        init_lines = [
-            "collectgarbage('collect')",
-            "local __memBefore = collectgarbage('count')",
-            "collectgarbage('collect')",
-            "local __staticOffset = collectgarbage('count') - __memBefore",
-            "_G.__telemetryStaticOffset = (_G.__telemetryStaticOffset or 0) + __staticOffset"
-        ]
         interceptor_payload = """
 if not _G.__telemetry_installed_usage then
     _G.__telemetry_installed_usage = true
@@ -338,8 +331,7 @@ if not _G.__telemetry_installed_usage then
     end
 end
 """
-        init_code = "\n".join(init_lines)
-        return init_code + "\n" + interceptor_payload + "\n" + code
+        return interceptor_payload + "\n" + code
 
 
 def process_file(file_path: Path, destination: Path, file_id: str, mode: str = "dump") -> None:
