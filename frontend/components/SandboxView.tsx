@@ -6,6 +6,7 @@ import { RiArrowLeftLine, RiTerminalLine, RiGamepadLine, RiNodeTree, RiLineChart
 import { Layout, Model, TabNode, IJsonModel, Actions, DockLocation } from "flexlayout-react";
 import { SettingsTab } from "./SettingsTab";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSettings } from "@/hooks/useSettings";
 import "flexlayout-react/style/alpha_dark.css";
 
 interface SandboxViewProps {
@@ -78,9 +79,11 @@ const SidebarTooltip = ({ title, description, children }: { title: string, descr
 export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const [memoryState, setMemoryState] = useState<any>(null);
   const [memoryUsage, setMemoryUsage] = useState<number[]>([]);
+  const [tickData, setTickData] = useState<{tick: number, enemies: number} | null>(null);
   const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT));
   const [, forceUpdate] = useState({});
   const tabStatesRef = React.useRef<Record<string, any>>({});
+  const { showDebugInfo } = useSettings();
 
   // Continuously track the latest state of all known tabs while they are open
   const jsonModel = model.toJson();
@@ -251,8 +254,22 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
               return [...prev, usageNum];
             });
           }
+        } else if (logLine.includes("__TICK_DATA__")) {
+          const tickIdx = logLine.indexOf("__TICK_DATA__");
+          if (tickIdx !== -1) {
+            const dataStr = logLine.substring(tickIdx);
+            const parts = dataStr.split(/\s+/);
+            if (parts.length >= 3) {
+              const tick = parseInt(parts[1]);
+              const enemies = parseInt(parts[2]);
+              if (!isNaN(tick) && !isNaN(enemies)) {
+                setTickData({ tick, enemies });
+              }
+            }
+          }
         } else if (logLine.includes("__LEVEL_START__")) {
           setMemoryUsage([]);
+          setTickData(null);
         } else if (logLine.includes("__MEM_DUMP_END__")) {
           setMemoryState(currentTickState);
           currentTickState = {}; // reset for next tick
@@ -329,6 +346,8 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     const component = node.getComponent();
 
     if (component === "sandbox") {
+      const currentUsage = memoryUsage.length > 0 ? memoryUsage[memoryUsage.length - 1] : null;
+
       return (
         <div className="relative w-full h-full bg-black">
           <Button 
@@ -340,6 +359,39 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
             <RiArrowLeftLine className="w-4 h-4 mr-2" />
             Exit Sandbox
           </Button>
+
+          {showDebugInfo && (currentUsage !== null || tickData !== null) && (
+            <div className="absolute bottom-4 left-4 z-50 bg-black/40 backdrop-blur-md text-white border border-white/10 shadow-lg rounded-md p-3 text-sm font-mono pointer-events-none flex flex-col gap-1 min-w-[280px]">
+              {currentUsage !== null && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-white/70">
+                    <RiLineChartLine className="w-4 h-4 mr-2" />
+                    <span>Mem:</span>
+                  </div>
+                  <span>{currentUsage.toFixed(2)} KB ({((currentUsage / 500) * 100).toFixed(1)}%)</span>
+                </div>
+              )}
+              {tickData !== null && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-white/70">
+                      <RiTerminalLine className="w-4 h-4 mr-2" />
+                      <span>Tick:</span>
+                    </div>
+                    <span>{tickData.tick} ticks ({(tickData.tick / 30).toFixed(1)}s)</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-white/70">
+                      <RiGamepadLine className="w-4 h-4 mr-2" />
+                      <span>Enemies:</span>
+                    </div>
+                    <span>{tickData.enemies}/1300 ({((tickData.enemies / 1300) * 100).toFixed(1)}%)</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <iframe 
             src={`/play/${gameUrl}_usage/pewpew.html`} 
             onLoad={handleIframeLoad}

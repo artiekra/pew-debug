@@ -263,6 +263,10 @@ if not _G.__telemetry_installed then
                 user_callback()
                 
                 if is_report_tick then
+
+                    local entities = pewpew.get_all_entities()
+                    print("__TICK_DATA__", __tick_count, #entities)
+ 
                     local seen = {}
                     local function print_node(depth, k1, k2, k3, k4, k5, v)
                         if type(v) ~= "table" then

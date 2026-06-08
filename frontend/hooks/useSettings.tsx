@@ -3,11 +3,13 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 export interface Settings {
   showFunctions: boolean;
   formatColors: boolean;
+  showDebugInfo: boolean;
 }
 
 const defaultSettings: Settings = {
   showFunctions: true,
   formatColors: true,
+  showDebugInfo: true,
 };
 
 export interface SettingsContextType extends Settings {
