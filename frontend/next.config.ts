@@ -5,12 +5,12 @@ const nextConfig = {
 
     return [
       {
-        source: "/inject",
-        destination: `${targetUrl}/inject/`,
+        source: "/api/v1/inject",
+        destination: `${targetUrl}/api/v1/inject/`,
       },
       {
-        source: "/play/:path*",
-        destination: `${targetUrl}/play/:path*`,
+        source: "/api/v1/play/:path*",
+        destination: `${targetUrl}/api/v1/play/:path*`,
       },
     ]
   },

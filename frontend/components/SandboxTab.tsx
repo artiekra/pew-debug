@@ -211,13 +211,13 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
       )}
 
       <iframe
-        src={`/play/${gameUrl}_usage/pewpew.html`}
+        src={`/api/v1/play/${gameUrl}_usage/pewpew.html`}
         onLoad={handleIframeLoad}
         className="relative z-10 h-full w-full border-none"
         title="pewpew usage sandbox"
       />
       <iframe
-        src={`/play/${gameUrl}_dump/pewpew.html`}
+        src={`/api/v1/play/${gameUrl}_dump/pewpew.html`}
         onLoad={handleIframeLoad}
         className="pointer-events-none absolute top-0 left-0 z-0 h-full w-full border-none opacity-0"
         title="pewpew dump sandbox"

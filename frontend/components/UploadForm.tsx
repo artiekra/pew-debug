@@ -131,7 +131,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
 
     try {
       // hitting the proxy route defined in next.config.js
-      const response = await fetch("/inject", {
+      const response = await fetch("/api/v1/inject", {
         method: "POST",
         body: formData,
       })

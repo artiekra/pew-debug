@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+app.include_router(router, prefix="/api/v1")
 
 
 @app.get("/")
@@ -28,7 +28,7 @@ async def serve_dashboard() -> FileResponse:
     return FileResponse("index.htm")
 
 
-app.mount("/play", StaticFiles(directory="storage"), name="play")
+app.mount("/api/v1/play", StaticFiles(directory="storage"), name="play")
 
 
 if __name__ == "__main__":
