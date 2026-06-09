@@ -13,7 +13,7 @@ export default function PewPewSandbox() {
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#0A0A0A]">
       <div className="pointer-events-none absolute inset-0 z-0">
         {/* Grid background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:2rem_2rem]"></div>
+        {/* <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:2rem_2rem]"></div> */}
         {/* Background glow */}
         {/* <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-primary/20 blur-[120px] rounded-full opacity-50"></div> */}
       </div>

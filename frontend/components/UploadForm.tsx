@@ -1,6 +1,8 @@
 import React, { useState, useRef, FormEvent, useEffect } from "react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Card,
   CardContent,
@@ -173,7 +175,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
       <Card className="relative overflow-hidden border-white/10 bg-black/40 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:shadow-primary/5">
         <CardHeader className="pt-8 pb-6 text-center">
           <CardTitle className="flex items-center justify-center gap-2 font-heading text-2xl font-bold tracking-tight text-foreground">
-            <svg
+            {/* <svg
               viewBox="0 0 128 128"
               className="mr-1 h-7 w-7 text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]"
               xmlns="http://www.w3.org/2000/svg"
@@ -188,7 +190,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
                 strokeDasharray="20 12"
               />
               <circle cx="98" cy="30" r="16" fill="currentColor" />
-            </svg>
+            </svg> */}
             Load Level Directory
           </CardTitle>
           <CardDescription className="mt-2 text-sm text-muted-foreground">
@@ -265,19 +267,19 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
                 </div>
 
                 <div className="flex items-center space-x-3 rounded-xl border border-white/5 bg-black/20 px-4 py-3 transition-all hover:border-primary/30">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     id="invulnerability"
                     checked={invulnerability}
-                    onChange={(e) => setInvulnerability(e.target.checked)}
-                    className="h-4 w-4 rounded border-white/20 bg-black/40 text-primary transition-all focus:ring-1 focus:ring-primary focus:ring-offset-0"
+                    onCheckedChange={(checked) =>
+                      setInvulnerability(checked === true)
+                    }
                   />
-                  <label
+                  <Label
                     htmlFor="invulnerability"
                     className="cursor-pointer text-sm font-medium text-foreground"
                   >
                     Player Invulnerability
-                  </label>
+                  </Label>
                 </div>
               </div>
             ) : (
@@ -295,7 +297,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
                     placeholder="Paste your copied Session ID here"
                     value={existingSessionId}
                     onChange={(e) => setExistingSessionId(e.target.value)}
-                    className="border-white/10 bg-black/20"
+                    className="mt-2 border-white/10 bg-black/20"
                     required={mode === "existing"}
                   />
                 </div>
@@ -305,7 +307,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
                     <label className="text-sm font-medium text-foreground">
                       Recent Sessions
                     </label>
-                    <div className="flex flex-col gap-2">
+                    <div className="mt-2 flex flex-col gap-2">
                       {recentSessions.map((session) => (
                         <div
                           key={session.id}
