@@ -47,7 +47,7 @@ export const ConsoleTab = ({
         <div className="absolute right-4 bottom-4 z-50">
           <Button
             variant="outline"
-            size="xl"
+            size="sm"
             onClick={onClear}
             className="h-8 rounded-md border-white/10 bg-black/60 px-3 text-white/70 shadow-lg backdrop-blur-md transition-all hover:bg-black/80 hover:text-red-400"
           >

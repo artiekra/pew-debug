@@ -166,9 +166,9 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       if (
         typeof screen !== "undefined" &&
         screen.orientation &&
-        screen.orientation.lock
+        (screen.orientation as any).lock
       ) {
-        screen.orientation.lock("landscape").catch(() => {})
+        ;(screen.orientation as any).lock("landscape").catch(() => {})
       }
     }
   }, [isMobile, isPortrait])
