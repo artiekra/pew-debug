@@ -83,6 +83,8 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     speedhackMultiplier,
     setSpeedhackMultiplier,
     handleIframeLoad,
+    isPaused,
+    setIsPaused,
   } = useSandboxEngine()
 
   const { setSteps, isTourCompleted, setIsTourCompleted } = useTour()
@@ -169,7 +171,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT))
   const [, forceUpdate] = useState({})
   const tabStatesRef = React.useRef<Record<string, any>>({})
-  const { showDebugInfo } = useSettings()
+  const { showDebugInfo, pauseOnHoverOut } = useSettings()
 
   // Continuously track the latest state of all known tabs while they are open
   const jsonModel = model.toJson()
@@ -218,6 +220,9 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           tickData={tickData}
           showDebugInfo={showDebugInfo}
           handleIframeLoad={handleIframeLoad}
+          isPaused={isPaused}
+          setIsPaused={setIsPaused}
+          pauseOnHoverOut={pauseOnHoverOut}
         />
       )
     }

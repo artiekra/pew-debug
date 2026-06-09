@@ -11,6 +11,17 @@ export const useSandboxEngine = () => {
   const [consoleLogs, setConsoleLogs] = useState<ConsoleMessage[]>([])
   const [speedhackMultiplier, setSpeedhackMultiplier] = useState<number>(1)
 
+  const [isPaused, setIsPaused] = useState(false)
+  const isPausedRef = useRef(false)
+  const forceTickRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    isPausedRef.current = isPaused
+    if (!isPaused && forceTickRef.current) {
+      forceTickRef.current()
+    }
+  }, [isPaused])
+
   const workerRef = useRef<Worker | null>(null)
   const speedRef = useRef(1)
 
@@ -47,6 +58,10 @@ export const useSandboxEngine = () => {
 
     const tryTick = () => {
       if (cbUsage && cbDump) {
+        if (isPausedRef.current) {
+          return
+        }
+
         const u = cbUsage
         const d = cbDump
         cbUsage = null
@@ -77,6 +92,7 @@ export const useSandboxEngine = () => {
       }
     }
 
+    forceTickRef.current = tryTick
     ;(window as any).registerIframe = (win: any, canvas: any) => {
       const isUsage = win.location.href.includes("_usage")
       if (isUsage) {
@@ -299,5 +315,7 @@ export const useSandboxEngine = () => {
     speedhackMultiplier,
     setSpeedhackMultiplier,
     handleIframeLoad,
+    isPaused,
+    setIsPaused,
   }
 }

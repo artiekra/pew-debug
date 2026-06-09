@@ -10,12 +10,14 @@ export interface Settings {
   showFunctions: boolean
   formatColors: boolean
   showDebugInfo: boolean
+  pauseOnHoverOut: boolean
 }
 
 const defaultSettings: Settings = {
   showFunctions: true,
   formatColors: true,
   showDebugInfo: true,
+  pauseOnHoverOut: true,
 }
 
 export interface SettingsContextType extends Settings {

@@ -5,8 +5,13 @@ import { Label } from "@/components/ui/label"
 import { useSettings } from "@/hooks/useSettings"
 
 export const SettingsTab = () => {
-  const { showFunctions, formatColors, showDebugInfo, updateSettings } =
-    useSettings()
+  const {
+    showFunctions,
+    formatColors,
+    showDebugInfo,
+    pauseOnHoverOut,
+    updateSettings,
+  } = useSettings()
 
   return (
     <div className="relative flex h-full w-full flex-col bg-black/40 backdrop-blur-xl">
@@ -65,6 +70,24 @@ export const SettingsTab = () => {
               <Switch
                 checked={showDebugInfo}
                 onCheckedChange={(v) => updateSettings({ showDebugInfo: v })}
+              />
+            </div>
+
+            <div className="h-px w-full bg-white/5" />
+
+            <div className="flex items-center justify-between gap-6">
+              <div className="space-y-1">
+                <Label className="text-base font-semibold text-white">
+                  Pause on Hover Out
+                </Label>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Automatically pause the game when your mouse leaves the
+                  sandbox tab.
+                </p>
+              </div>
+              <Switch
+                checked={pauseOnHoverOut}
+                onCheckedChange={(v) => updateSettings({ pauseOnHoverOut: v })}
               />
             </div>
           </div>

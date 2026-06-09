@@ -13,6 +13,9 @@ interface SandboxTabProps {
   tickData: { tick: number; enemies: number } | null
   showDebugInfo: boolean
   handleIframeLoad: (e: React.SyntheticEvent<HTMLIFrameElement>) => void
+  isPaused: boolean
+  setIsPaused: (p: boolean) => void
+  pauseOnHoverOut: boolean
 }
 
 export const SandboxTab: React.FC<SandboxTabProps> = ({
@@ -21,12 +24,33 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
   tickData,
   showDebugInfo,
   handleIframeLoad,
+  isPaused,
+  setIsPaused,
+  pauseOnHoverOut,
 }) => {
   const currentUsage =
     memoryUsage.length > 0 ? memoryUsage[memoryUsage.length - 1] : null
 
+  React.useEffect(() => {
+    if (!pauseOnHoverOut && isPaused) {
+      setIsPaused(false)
+    }
+  }, [pauseOnHoverOut, isPaused, setIsPaused])
+
   return (
-    <div className="relative h-full w-full bg-black">
+    <div
+      className="relative h-full w-full bg-black"
+      onMouseEnter={() => {
+        if (pauseOnHoverOut) {
+          setIsPaused(false)
+        }
+      }}
+      onMouseLeave={() => {
+        if (pauseOnHoverOut) {
+          setIsPaused(true)
+        }
+      }}
+    >
       <Button
         id="tour-exit-sandbox"
         variant="outline"
@@ -37,6 +61,14 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
         <RiArrowLeftLine className="mr-2 h-4 w-4" />
         Exit Sandbox
       </Button>
+
+      {isPaused && (
+        <div className="pointer-events-none absolute top-4 right-4 z-50 rounded-md border border-yellow-500/50 bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-200 shadow-lg backdrop-blur-md">
+          <b>Game Paused</b> (Mouse out of sandbox)
+          <br />
+          <p>You can disable this in settings.</p>
+        </div>
+      )}
 
       {showDebugInfo && (currentUsage !== null || tickData !== null) && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-50 flex min-w-[280px] flex-col gap-1 rounded-md border border-white/10 bg-black/40 p-3 font-mono text-sm text-white shadow-lg backdrop-blur-md">
