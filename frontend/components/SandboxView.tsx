@@ -22,7 +22,51 @@ interface SandboxViewProps {
   gameUrl: string
 }
 
-const DEFAULT_LAYOUT: IJsonModel = {
+const MOBILE_LAYOUT: IJsonModel = {
+  global: {
+    tabEnableClose: true,
+    tabEnableRename: false,
+    tabSetEnableMaximize: true,
+    tabEnablePopout: true,
+    tabEnablePopoutFloatIcon: true,
+    tabEnablePopoutIcon: true,
+  },
+  borders: [],
+  layout: {
+    type: "row",
+    id: "root",
+    weight: 100,
+    children: [
+      {
+        type: "tabset",
+        weight: 100,
+        id: "sandbox-tabset",
+        children: [
+          {
+            type: "tab",
+            id: "sandbox-tab",
+            name: "Sandbox",
+            component: "sandbox",
+          },
+          {
+            type: "tab",
+            id: "memory-tab",
+            name: "Memory Tree",
+            component: "memory",
+          },
+          {
+            type: "tab",
+            id: "console-tab",
+            name: "Console",
+            component: "console",
+          },
+        ],
+      },
+    ],
+  },
+}
+
+const DESKTOP_LAYOUT: IJsonModel = {
   global: {
     tabEnableClose: true,
     tabEnableRename: false,
@@ -89,6 +133,39 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
   const { setSteps, isTourCompleted, setIsTourCompleted } = useTour()
   const [isTourDialogOpen, setIsTourDialogOpen] = React.useState(false)
+  const [isPortrait, setIsPortrait] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const checkMobile = () => {
+      const mobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        )
+      const smallScreen = window.innerWidth <= 768
+      setIsMobile(mobile || smallScreen)
+      setIsPortrait(window.innerHeight > window.innerWidth)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  React.useEffect(() => {
+    if (isMobile && isPortrait) {
+      if (
+        typeof screen !== "undefined" &&
+        screen.orientation &&
+        screen.orientation.lock
+      ) {
+        screen.orientation.lock("landscape").catch(() => {})
+      }
+    }
+  }, [isMobile, isPortrait])
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -168,7 +245,18 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     }
   }, [isTourCompleted])
 
-  const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT))
+  const [model] = useState(() => {
+    let isMobileDevice = false
+    if (typeof window !== "undefined") {
+      const mobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        )
+      const smallScreen = window.innerWidth <= 768
+      isMobileDevice = mobile || smallScreen
+    }
+    return Model.fromJson(isMobileDevice ? MOBILE_LAYOUT : DESKTOP_LAYOUT)
+  })
   const [, forceUpdate] = useState({})
   const tabStatesRef = React.useRef<Record<string, any>>({})
   const { showDebugInfo, pauseOnHoverOut } = useSettings()
@@ -334,10 +422,42 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       if (saved?.parentId && model.getNodeById(saved.parentId)) {
         targetId = saved.parentId
         location = DockLocation.CENTER
+      } else if (!isFloat && isMobile) {
+        const mainTabset = model.getNodeById("sandbox-tabset")
+        if (mainTabset) {
+          targetId = "sandbox-tabset"
+          location = DockLocation.CENTER
+        }
       }
 
       model.doAction(Actions.addTab(jsonNode, targetId, location, -1, true))
     }
+  }
+
+  if (isMobile && isPortrait) {
+    return (
+      <div className="flex h-[100dvh] w-full flex-col items-center justify-center bg-[var(--color-background)] p-6 text-center text-[var(--color-text)]">
+        <div className="mb-4 text-red-500">
+          <svg
+            className="h-12 w-12"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+            />
+          </svg>
+        </div>
+        <h2 className="mb-2 text-xl font-bold">Please Rotate Your Device</h2>
+        <p className="text-neutral-400">
+          The sandbox requires landscape mode to function correctly.
+        </p>
+      </div>
+    )
   }
 
   const hasSandbox = !!model.getNodeById("sandbox-tab")
