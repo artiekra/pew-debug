@@ -1,11 +1,19 @@
-import React from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   RiArrowLeftLine,
   RiTerminalLine,
   RiGamepadLine,
   RiLineChartLine,
+  RiClipboardLine,
+  RiCheckLine,
 } from "@remixicon/react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface SandboxTabProps {
   gameUrl: string
@@ -17,6 +25,28 @@ interface SandboxTabProps {
   setIsPaused: (p: boolean) => void
   pauseOnHoverOut: boolean
 }
+
+const SandboxTooltip = ({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description: string
+  children: React.ReactNode
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>{children}</TooltipTrigger>
+    <TooltipContent
+      side="bottom"
+      sideOffset={10}
+      className="z-50 flex flex-col gap-1 rounded-md border border-[#333] bg-[#1a1a1a] px-3 py-2 shadow-lg"
+    >
+      <span className="text-sm font-bold text-white">{title}</span>
+      <span className="text-xs text-[#a0a0a0]">{description}</span>
+    </TooltipContent>
+  </Tooltip>
+)
 
 export const SandboxTab: React.FC<SandboxTabProps> = ({
   gameUrl,
@@ -30,12 +60,19 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
 }) => {
   const currentUsage =
     memoryUsage.length > 0 ? memoryUsage[memoryUsage.length - 1] : null
+  const [copied, setCopied] = useState(false)
 
   React.useEffect(() => {
     if (!pauseOnHoverOut && isPaused) {
       setIsPaused(false)
     }
   }, [pauseOnHoverOut, isPaused, setIsPaused])
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(gameUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div
@@ -51,16 +88,45 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
         }
       }}
     >
-      <Button
-        id="tour-exit-sandbox"
-        variant="outline"
-        size="sm"
-        onClick={() => window.location.reload()}
-        className="absolute top-4 left-4 z-50 h-10 rounded-full border-white/10 bg-black/40 px-4 text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/60 hover:text-primary"
-      >
-        <RiArrowLeftLine className="mr-2 h-4 w-4" />
-        Exit Sandbox
-      </Button>
+      <TooltipProvider delayDuration={0}>
+        <div className="absolute top-4 left-4 z-50 flex items-center gap-2">
+          <SandboxTooltip title="Exit Sandbox" description="Reloads the window">
+            <Button
+              id="tour-exit-sandbox"
+              variant="outline"
+              size="icon"
+              onClick={() => window.location.reload()}
+              className="h-8 w-8 rounded-full border-white/10 bg-black/40 text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/60 hover:text-primary"
+            >
+              <RiArrowLeftLine className="h-7 w-7" />
+            </Button>
+          </SandboxTooltip>
+
+          <SandboxTooltip
+            title={copied ? "Copied!" : "Copy Session ID"}
+            description={
+              copied ? "Game ID copied" : "Copies gameUrl to clipboard"
+            }
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCopy}
+              className={`h-8 w-8 rounded-full border-white/10 shadow-lg backdrop-blur-md transition-all duration-300 ${
+                copied
+                  ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                  : "bg-black/40 text-white hover:bg-black/60 hover:text-primary"
+              }`}
+            >
+              {copied ? (
+                <RiCheckLine className="h-7 w-7" />
+              ) : (
+                <RiClipboardLine className="h-7 w-7" />
+              )}
+            </Button>
+          </SandboxTooltip>
+        </div>
+      </TooltipProvider>
 
       {isPaused && (
         <div className="pointer-events-none absolute top-4 right-4 z-50 rounded-md border border-yellow-500/50 bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-200 shadow-lg backdrop-blur-md">
