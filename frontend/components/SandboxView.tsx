@@ -1,19 +1,7 @@
-import React, { useState, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
+import React, { useState } from "react"
 import { MemoryTree } from "./MemoryTree"
 import { MemoryUsage } from "./MemoryUsage"
-import { ConsoleTab, ConsoleMessage } from "./ConsoleTab"
-import {
-  RiArrowLeftLine,
-  RiTerminalLine,
-  RiGamepadLine,
-  RiNodeTree,
-  RiLineChartLine,
-  RiSettings3Line,
-  RiGithubFill,
-  RiExternalLinkLine,
-  RiSpeedUpLine,
-} from "@remixicon/react"
+import { ConsoleTab } from "./ConsoleTab"
 import {
   Layout,
   Model,
@@ -24,14 +12,11 @@ import {
 } from "flexlayout-react"
 import { SpeedhackTab } from "./SpeedhackTab"
 import { SettingsTab } from "./SettingsTab"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useSettings } from "@/hooks/useSettings"
 import "flexlayout-react/style/alpha_dark.css"
+import { SandboxSidebar } from "./SandboxSidebar"
+import { SandboxTab } from "./SandboxTab"
+import { useSandboxEngine } from "@/hooks/useSandboxEngine"
 
 interface SandboxViewProps {
   gameUrl: string
@@ -88,47 +73,21 @@ const DEFAULT_LAYOUT: IJsonModel = {
   },
 }
 
-const SidebarTooltip = ({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description: string
-  children: React.ReactNode
-}) => (
-  <Tooltip>
-    <TooltipTrigger asChild>{children}</TooltipTrigger>
-    <TooltipContent
-      side="right"
-      sideOffset={10}
-      className="z-50 flex flex-col gap-1 rounded-md border border-[#333] bg-[#1a1a1a] px-3 py-2 shadow-lg"
-    >
-      <span className="text-sm font-bold text-white">{title}</span>
-      <span className="text-xs text-[#a0a0a0]">{description}</span>
-    </TooltipContent>
-  </Tooltip>
-)
-
 export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
-  const [memoryState, setMemoryState] = useState<any>(null)
-  const [memoryUsage, setMemoryUsage] = useState<number[]>([])
-  const [tickData, setTickData] = useState<{
-    tick: number
-    enemies: number
-  } | null>(null)
-  const [consoleLogs, setConsoleLogs] = useState<ConsoleMessage[]>([])
+  const {
+    memoryState,
+    memoryUsage,
+    tickData,
+    consoleLogs,
+    speedhackMultiplier,
+    setSpeedhackMultiplier,
+    handleIframeLoad,
+  } = useSandboxEngine()
+
   const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT))
   const [, forceUpdate] = useState({})
   const tabStatesRef = React.useRef<Record<string, any>>({})
-  const workerRef = React.useRef<Worker | null>(null)
   const { showDebugInfo } = useSettings()
-  const [speedhackMultiplier, setSpeedhackMultiplier] = useState<number>(1)
-  const speedRef = React.useRef(1)
-
-  useEffect(() => {
-    speedRef.current = speedhackMultiplier
-  }, [speedhackMultiplier])
 
   // Continuously track the latest state of all known tabs while they are open
   const jsonModel = model.toJson()
@@ -140,191 +99,6 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     "settings-tab",
     "speedhack-tab",
   ]
-
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL("../workers/logParser.worker.ts", import.meta.url)
-    )
-    workerRef.current.onmessage = (e) => {
-      const { type, value, data, state, line, error } = e.data
-      if (type === "usage") {
-        setMemoryUsage((prev) => [...prev, value])
-      } else if (type === "tick") {
-        setTickData(data)
-      } else if (type === "level_start") {
-        setMemoryUsage([])
-        setTickData(null)
-      } else if (type === "memory_state") {
-        setMemoryState(state)
-      } else if (type === "parse_error") {
-        console.warn("Worker parse error for line:", line, error)
-      }
-    }
-
-    let cbUsage: any = null
-    let cbDump: any = null
-    let usageWin: any = null
-    let dumpWin: any = null
-    let usageCanvas: any = null
-    let dumpCanvas: any = null
-
-    const tryTick = () => {
-      if (cbUsage && cbDump) {
-        const u = cbUsage
-        const d = cbDump
-        cbUsage = null
-        cbDump = null
-
-        const executeTick = (now: number) => {
-          const dt = 1000 / 60
-          if (usageWin) {
-            usageWin.virtualTime += dt
-            usageWin.perfTime += dt
-          }
-          if (dumpWin) {
-            dumpWin.virtualTime += dt
-            dumpWin.perfTime += dt
-          }
-          u(usageWin ? usageWin.perfTime : now)
-          d(dumpWin ? dumpWin.perfTime : now)
-        }
-
-        if (speedRef.current === 1) {
-          window.requestAnimationFrame(executeTick)
-        } else {
-          setTimeout(
-            () => executeTick(performance.now()),
-            1000 / (60 * speedRef.current)
-          )
-        }
-      }
-    }
-
-    ;(window as any).registerIframe = (win: any, canvas: any) => {
-      const isUsage = win.location.href.includes("_usage")
-      if (isUsage) {
-        usageWin = win
-        usageCanvas = canvas
-
-        win.requestAnimationFrame = (cb: any) => {
-          cbUsage = cb
-          tryTick()
-          return 1
-        }
-
-        const events = [
-          "keydown",
-          "keyup",
-          "keypress",
-          "mousedown",
-          "mouseup",
-          "mousemove",
-          "mouseenter",
-          "mouseleave",
-          "mouseover",
-          "mouseout",
-          "contextmenu",
-          "wheel",
-          "touchstart",
-          "touchend",
-          "touchmove",
-          "touchcancel",
-          "pointerdown",
-          "pointerup",
-          "pointermove",
-          "pointerenter",
-          "pointerleave",
-          "pointerover",
-          "pointerout",
-          "pointercancel",
-          "blur",
-          "focus",
-        ]
-        events.forEach((type) => {
-          win.addEventListener(
-            type,
-            (e: any) => {
-              if (type === "pointerdown") {
-                try {
-                  e.target.setPointerCapture(e.pointerId)
-                } catch (err) {}
-              }
-              if (type === "pointerup" || type === "pointercancel") {
-                try {
-                  if (e.target.hasPointerCapture(e.pointerId)) {
-                    e.target.releasePointerCapture(e.pointerId)
-                  }
-                } catch (err) {}
-              }
-
-              if (dumpWin) {
-                const targetMap = new Map<any, any>([
-                  [usageWin, dumpWin],
-                  [usageCanvas, dumpCanvas],
-                  [usageWin.document, dumpWin.document],
-                  [usageWin.document.body, dumpWin.document.body],
-                  [
-                    usageWin.document.documentElement,
-                    dumpWin.document.documentElement,
-                  ],
-                ])
-
-                const dumpEvent = new dumpWin[e.constructor.name](e.type, e)
-
-                let currentObj = e
-                const props = new Set<string>()
-                while (currentObj && currentObj !== Object.prototype) {
-                  Object.getOwnPropertyNames(currentObj).forEach((p) =>
-                    props.add(p)
-                  )
-                  currentObj = Object.getPrototypeOf(currentObj)
-                }
-
-                props.forEach((key) => {
-                  if (
-                    key === "target" ||
-                    key === "currentTarget" ||
-                    key === "srcElement" ||
-                    key === "path" ||
-                    key === "composedPath"
-                  )
-                    return
-                  if (typeof e[key] !== "function") {
-                    try {
-                      Object.defineProperty(dumpEvent, key, {
-                        get: () => {
-                          let val = e[key]
-                          return targetMap.has(val) ? targetMap.get(val) : val
-                        },
-                      })
-                    } catch (err) {}
-                  }
-                })
-
-                let dispatchTarget = targetMap.get(e.target) || dumpWin
-                dispatchTarget.dispatchEvent(dumpEvent)
-              }
-            },
-            true
-          )
-        })
-      } else {
-        dumpWin = win
-        dumpCanvas = canvas
-
-        win.requestAnimationFrame = (cb: any) => {
-          cbDump = cb
-          tryTick()
-          return 1
-        }
-      }
-    }
-
-    return () => {
-      delete (window as any).registerIframe
-      workerRef.current?.terminate()
-    }
-  }, [])
 
   currentTabIds.forEach((id) => {
     const node = model.getNodeById(id)
@@ -351,152 +125,18 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     }
   })
 
-  /** intercepts the iframe console once it loads. */
-  const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
-    const iframe = e.currentTarget
-
-    try {
-      const targetWindow = iframe.contentWindow as any
-      if (!targetWindow) return
-
-      const originalLog = targetWindow.console.log
-      const originalWarn = targetWindow.console.warn
-      const originalError = targetWindow.console.error
-      const originalInfo = targetWindow.console.info
-      let currentTickState: any = {}
-
-      // overwrite the sandbox's console
-      targetWindow.console.log = (...args: any[]) => {
-        const logLine = args.join(" ")
-
-        const isInternal =
-          logLine.includes("__MEM_USAGE__") ||
-          logLine.includes("__TICK_DATA__") ||
-          logLine.includes("__LEVEL_START__") ||
-          logLine.includes("__MEM_START__") ||
-          logLine.includes("__MEM_PART__") ||
-          logLine.includes("__MEM_END__") ||
-          logLine.includes("__MEM__")
-
-        if (isInternal) {
-          workerRef.current?.postMessage({ type: "parse", line: logLine })
-        } else {
-          // pass normal logs through
-          originalLog.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "log", message: logLine },
-          ])
-        }
-      }
-
-      if (originalWarn) {
-        targetWindow.console.warn = (...args: any[]) => {
-          originalWarn.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "warn", message: args.join(" ") },
-          ])
-        }
-      }
-      if (originalError) {
-        targetWindow.console.error = (...args: any[]) => {
-          originalError.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "error", message: args.join(" ") },
-          ])
-        }
-      }
-      if (originalInfo) {
-        targetWindow.console.info = (...args: any[]) => {
-          originalInfo.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "info", message: args.join(" ") },
-          ])
-        }
-      }
-    } catch (err) {
-      console.warn(
-        "could not hook into iframe console. check cors/proxy setup.",
-        err
-      )
-    }
-  }
-
   const factory = (node: TabNode) => {
     const component = node.getComponent()
 
     if (component === "sandbox") {
-      const currentUsage =
-        memoryUsage.length > 0 ? memoryUsage[memoryUsage.length - 1] : null
-
       return (
-        <div className="relative h-full w-full bg-black">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.location.reload()}
-            className="absolute top-4 left-4 z-50 h-10 rounded-full border-white/10 bg-black/40 px-4 text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/60 hover:text-primary"
-          >
-            <RiArrowLeftLine className="mr-2 h-4 w-4" />
-            Exit Sandbox
-          </Button>
-
-          {showDebugInfo && (currentUsage !== null || tickData !== null) && (
-            <div className="pointer-events-none absolute bottom-4 left-4 z-50 flex min-w-[280px] flex-col gap-1 rounded-md border border-white/10 bg-black/40 p-3 font-mono text-sm text-white shadow-lg backdrop-blur-md">
-              {currentUsage !== null && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-white/70">
-                    <RiLineChartLine className="mr-2 h-4 w-4" />
-                    <span>Mem:</span>
-                  </div>
-                  <span>
-                    {currentUsage.toFixed(2)} KB (
-                    {((currentUsage / 500) * 100).toFixed(1)}%)
-                  </span>
-                </div>
-              )}
-              {tickData !== null && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-white/70">
-                      <RiTerminalLine className="mr-2 h-4 w-4" />
-                      <span>Tick:</span>
-                    </div>
-                    <span>
-                      {tickData.tick} ticks ({(tickData.tick / 30).toFixed(1)}s)
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-white/70">
-                      <RiGamepadLine className="mr-2 h-4 w-4" />
-                      <span>Enemies:</span>
-                    </div>
-                    <span>
-                      {tickData.enemies}/1300 (
-                      {((tickData.enemies / 1300) * 100).toFixed(1)}%)
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          <iframe
-            src={`/play/${gameUrl}_usage/pewpew.html`}
-            onLoad={handleIframeLoad}
-            className="relative z-10 h-full w-full border-none"
-            title="pewpew usage sandbox"
-          />
-          <iframe
-            src={`/play/${gameUrl}_dump/pewpew.html`}
-            onLoad={handleIframeLoad}
-            className="pointer-events-none absolute top-0 left-0 z-0 h-full w-full border-none opacity-0"
-            title="pewpew dump sandbox"
-          />
-        </div>
+        <SandboxTab
+          gameUrl={gameUrl}
+          memoryUsage={memoryUsage}
+          tickData={tickData}
+          showDebugInfo={showDebugInfo}
+          handleIframeLoad={handleIframeLoad}
+        />
       )
     }
 
@@ -615,171 +255,15 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
   return (
     <div className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--color-background)] text-[var(--color-text)]">
-      {/* Left Toolbar styled like FlexLayout borders */}
-      <div
-        className="z-20 flex h-full flex-col items-center py-2"
-        style={{
-          width: "40px",
-          backgroundColor: "var(--color-border-background, #1a1a1a)",
-          borderRight: "1px solid var(--color-border-divider-line, #333)",
-        }}
-      >
-        <TooltipProvider delayDuration={0}>
-          <SidebarTooltip title="Sandbox" description="PewPew utils - gameplay">
-            <button
-              onClick={() =>
-                toggleTab(
-                  "sandbox-tab",
-                  "Sandbox",
-                  "sandbox",
-                  DockLocation.LEFT
-                )
-              }
-              className={`flex w-full flex-col items-center border-l-[3px] py-2 transition-colors duration-150 ${
-                hasSandbox
-                  ? "bg-[var(--color-border-tab-selected-background,transparent)]"
-                  : "border-transparent text-[var(--color-border-tab-unselected,gray)] hover:bg-white/5 hover:text-[var(--color-text)]"
-              }`}
-            >
-              <RiGamepadLine className="h-5 w-5" />
-            </button>
-          </SidebarTooltip>
-
-          <SidebarTooltip
-            title="Memory Tree"
-            description="Inspect game variables and state structure"
-          >
-            <button
-              onClick={() =>
-                toggleTab(
-                  "memory-tab",
-                  "Memory Tree",
-                  "memory",
-                  DockLocation.RIGHT
-                )
-              }
-              className={`mt-2 flex w-full flex-col items-center border-l-[3px] py-2 transition-colors duration-150 ${
-                hasMemory
-                  ? "bg-[var(--color-border-tab-selected-background,transparent)]"
-                  : "border-transparent text-[var(--color-border-tab-unselected,gray)] hover:bg-white/5 hover:text-[var(--color-text)]"
-              }`}
-            >
-              <RiNodeTree className="h-5 w-5" />
-            </button>
-          </SidebarTooltip>
-
-          <SidebarTooltip
-            title="Memory Usage"
-            description="Monitor memory allocations over time"
-          >
-            <button
-              onClick={() =>
-                toggleTab(
-                  "usage-tab",
-                  "Memory Usage",
-                  "usage",
-                  DockLocation.RIGHT
-                )
-              }
-              className={`mt-2 flex w-full flex-col items-center border-l-[3px] py-2 transition-colors duration-150 ${
-                hasUsage
-                  ? "bg-[var(--color-border-tab-selected-background,transparent)]"
-                  : "border-transparent text-[var(--color-border-tab-unselected,gray)] hover:bg-white/5 hover:text-[var(--color-text)]"
-              }`}
-            >
-              <RiLineChartLine className="h-5 w-5" />
-            </button>
-          </SidebarTooltip>
-
-          <SidebarTooltip
-            title="Console"
-            description="View dev tools console output"
-          >
-            <button
-              onClick={() =>
-                toggleTab(
-                  "console-tab",
-                  "Console",
-                  "console",
-                  DockLocation.RIGHT
-                )
-              }
-              className={`mt-2 flex w-full flex-col items-center border-l-[3px] py-2 transition-colors duration-150 ${
-                hasConsole
-                  ? "bg-[var(--color-border-tab-selected-background,transparent)]"
-                  : "border-transparent text-[var(--color-border-tab-unselected,gray)] hover:bg-white/5 hover:text-[var(--color-text)]"
-              }`}
-            >
-              <RiTerminalLine className="h-5 w-5" />
-            </button>
-          </SidebarTooltip>
-
-          <div className="flex-1" />
-
-          <SidebarTooltip
-            title="GitHub Repository"
-            description="View source code or report issues"
-          >
-            <a
-              href="https://github.com/artiekra/pew-debug"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex w-full flex-col items-center border-l-[3px] border-transparent py-2 text-[var(--color-border-tab-unselected,gray)] transition-colors duration-150 hover:bg-white/5 hover:text-[var(--color-text)]"
-            >
-              <RiGithubFill className="h-5 w-5 group-hover:hidden" />
-              <RiExternalLinkLine className="hidden h-5 w-5 group-hover:block" />
-            </a>
-          </SidebarTooltip>
-
-          <SidebarTooltip
-            title="Speedhack"
-            description="Control game execution speed"
-          >
-            <button
-              onClick={() =>
-                toggleTab(
-                  "speedhack-tab",
-                  "Speedhack",
-                  "speedhack",
-                  DockLocation.CENTER,
-                  true
-                )
-              }
-              className={`mb-2 flex w-full flex-col items-center border-l-[3px] py-2 transition-colors duration-150 ${
-                hasSpeedhack
-                  ? "bg-[var(--color-border-tab-selected-background,transparent)]"
-                  : "border-transparent text-[var(--color-border-tab-unselected,gray)] hover:bg-white/5 hover:text-[var(--color-text)]"
-              }`}
-            >
-              <RiSpeedUpLine className="h-5 w-5" />
-            </button>
-          </SidebarTooltip>
-
-          <SidebarTooltip
-            title="Settings"
-            description="Configure app preferences"
-          >
-            <button
-              onClick={() =>
-                toggleTab(
-                  "settings-tab",
-                  "Settings",
-                  "settings",
-                  DockLocation.CENTER,
-                  true
-                )
-              }
-              className={`mb-2 flex w-full flex-col items-center border-l-[3px] py-2 transition-colors duration-150 ${
-                hasSettings
-                  ? "bg-[var(--color-border-tab-selected-background,transparent)]"
-                  : "border-transparent text-[var(--color-border-tab-unselected,gray)] hover:bg-white/5 hover:text-[var(--color-text)]"
-              }`}
-            >
-              <RiSettings3Line className="h-5 w-5" />
-            </button>
-          </SidebarTooltip>
-        </TooltipProvider>
-      </div>
+      <SandboxSidebar
+        hasSandbox={hasSandbox}
+        hasMemory={hasMemory}
+        hasUsage={hasUsage}
+        hasConsole={hasConsole}
+        hasSettings={hasSettings}
+        hasSpeedhack={hasSpeedhack}
+        toggleTab={toggleTab}
+      />
 
       <div className="relative h-full flex-1">
         <Layout
