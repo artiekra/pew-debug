@@ -7,6 +7,8 @@ import {
   RiLineChartLine,
   RiClipboardLine,
   RiCheckLine,
+  RiSaveLine,
+  RiHistoryLine,
 } from "@remixicon/react"
 import {
   Tooltip,
@@ -24,6 +26,8 @@ interface SandboxTabProps {
   isPaused: boolean
   setIsPaused: (p: boolean) => void
   pauseOnHoverOut: boolean
+  takeSnapshot: () => void
+  restoreSnapshot: () => void
 }
 
 const SandboxTooltip = ({
@@ -57,6 +61,8 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
   isPaused,
   setIsPaused,
   pauseOnHoverOut,
+  takeSnapshot,
+  restoreSnapshot,
 }) => {
   const currentUsage =
     memoryUsage.length > 0 ? memoryUsage[memoryUsage.length - 1] : null
@@ -123,6 +129,34 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
               ) : (
                 <RiClipboardLine className="h-7 w-7" />
               )}
+            </Button>
+          </SandboxTooltip>
+
+          <SandboxTooltip
+            title="Take Snapshot"
+            description="Saves the current state of the level"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => takeSnapshot()}
+              className="h-8 w-8 rounded-full border-white/10 bg-black/40 text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/60 hover:text-primary"
+            >
+              <RiSaveLine className="h-7 w-7" />
+            </Button>
+          </SandboxTooltip>
+
+          <SandboxTooltip
+            title="Restore Snapshot"
+            description="Rewinds the level to the last snapshot"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => restoreSnapshot()}
+              className="h-8 w-8 rounded-full border-white/10 bg-black/40 text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/60 hover:text-primary"
+            >
+              <RiHistoryLine className="h-7 w-7" />
             </Button>
           </SandboxTooltip>
         </div>

@@ -8,6 +8,7 @@ import {
   RiGithubFill,
   RiExternalLinkLine,
   RiSpeedUpLine,
+  RiHistoryLine,
 } from "@remixicon/react"
 import {
   Tooltip,
@@ -46,6 +47,7 @@ interface SandboxSidebarProps {
   hasConsole: boolean
   hasSettings: boolean
   hasSpeedhack: boolean
+  hasSnapshots: boolean
   toggleTab: (
     id: string,
     name: string,
@@ -62,6 +64,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
   hasConsole,
   hasSettings,
   hasSpeedhack,
+  hasSnapshots,
   toggleTab,
 }) => {
   return (
@@ -175,6 +178,29 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
             }`}
           >
             <RiSpeedUpLine className="h-5 w-5" />
+          </button>
+        </SidebarTooltip>
+
+        <SidebarTooltip
+          title="Snapshot Manager"
+          description="Manage and restore level snapshots"
+        >
+          <button
+            onClick={() =>
+              toggleTab(
+                "snapshots-tab",
+                "Snapshots",
+                "snapshots",
+                DockLocation.RIGHT
+              )
+            }
+            className={`mt-2 flex w-full flex-col items-center border-l-[3px] py-2 transition-colors duration-150 ${
+              hasSnapshots
+                ? "bg-[var(--color-border-tab-selected-background,transparent)]"
+                : "border-transparent text-[var(--color-border-tab-unselected,gray)] hover:bg-white/5 hover:text-[var(--color-text)]"
+            }`}
+          >
+            <RiHistoryLine className="h-5 w-5" />
           </button>
         </SidebarTooltip>
 

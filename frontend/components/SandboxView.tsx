@@ -16,6 +16,7 @@ import { useSettings } from "@/hooks/useSettings"
 import "flexlayout-react/style/alpha_dark.css"
 import { SandboxSidebar } from "./SandboxSidebar"
 import { SandboxTab } from "./SandboxTab"
+import { SnapshotTab } from "./SnapshotTab"
 import { useSandboxEngine } from "@/hooks/useSandboxEngine"
 import { useTour, TourAlertDialog, TourStep } from "@/components/tour"
 interface SandboxViewProps {
@@ -129,6 +130,11 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     handleIframeLoad,
     isPaused,
     setIsPaused,
+    takeSnapshot,
+    restoreSnapshot,
+    snapshots,
+    renameSnapshot,
+    deleteSnapshot,
   } = useSandboxEngine()
 
   const { setSteps, isTourCompleted, setIsTourCompleted } = useTour()
@@ -270,6 +276,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     "console-tab",
     "settings-tab",
     "speedhack-tab",
+    "snapshots-tab",
   ]
 
   currentTabIds.forEach((id) => {
@@ -311,6 +318,8 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           isPaused={isPaused}
           setIsPaused={setIsPaused}
           pauseOnHoverOut={pauseOnHoverOut}
+          takeSnapshot={takeSnapshot}
+          restoreSnapshot={restoreSnapshot}
         />
       )
     }
@@ -355,6 +364,18 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
         <SpeedhackTab
           speed={speedhackMultiplier}
           setSpeed={setSpeedhackMultiplier}
+        />
+      )
+    }
+
+    if (component === "snapshots") {
+      return (
+        <SnapshotTab
+          snapshots={snapshots}
+          takeSnapshot={takeSnapshot}
+          restoreSnapshot={restoreSnapshot}
+          renameSnapshot={renameSnapshot}
+          deleteSnapshot={deleteSnapshot}
         />
       )
     }
@@ -475,6 +496,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
   const hasConsole = !!model.getNodeById("console-tab")
   const hasSettings = !!model.getNodeById("settings-tab")
   const hasSpeedhack = !!model.getNodeById("speedhack-tab")
+  const hasSnapshots = !!model.getNodeById("snapshots-tab")
 
   return (
     <div className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--color-background)] text-[var(--color-text)]">
@@ -485,6 +507,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
         hasConsole={hasConsole}
         hasSettings={hasSettings}
         hasSpeedhack={hasSpeedhack}
+        hasSnapshots={hasSnapshots}
         toggleTab={toggleTab}
       />
 

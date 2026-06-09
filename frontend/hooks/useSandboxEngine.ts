@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useRef } from "react"
 import { ConsoleMessage } from "@/components/ConsoleTab"
 
+export interface Snapshot {
+  id: string
+  name: string
+  timestamp: number
+  usage: Uint8Array
+  dump: Uint8Array
+  usageVirtualTime: number
+  usagePerfTime: number
+  dumpVirtualTime: number
+  dumpPerfTime: number
+}
+
 export const useSandboxEngine = () => {
   const [memoryState, setMemoryState] = useState<any>(null)
   const [memoryUsage, setMemoryUsage] = useState<number[]>([])
@@ -13,7 +25,76 @@ export const useSandboxEngine = () => {
 
   const [isPaused, setIsPaused] = useState(false)
   const isPausedRef = useRef(false)
-  const forceTickRef = useRef<(() => void) | null>(null)
+  const forceTickRef = useRef<((force?: boolean) => void) | null>(null)
+  const usageWinRef = useRef<any>(null)
+  const dumpWinRef = useRef<any>(null)
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([])
+
+  const takeSnapshot = (name?: string) => {
+    const uWin = usageWinRef.current
+    const dWin = dumpWinRef.current
+    const uHeap = uWin?.Module?.HEAPU8 || (uWin?.Module?.wasmMemory ? new Uint8Array(uWin.Module.wasmMemory.buffer) : null)
+    const dHeap = dWin?.Module?.HEAPU8 || (dWin?.Module?.wasmMemory ? new Uint8Array(dWin.Module.wasmMemory.buffer) : null)
+
+    if (uHeap && dHeap) {
+      // Create a stable random ID fallback
+      const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
+      
+      const newSnapshot: Snapshot = {
+        id,
+        name: name || `Snapshot ${snapshots.length + 1}`,
+        timestamp: Date.now(),
+        usage: new Uint8Array(uHeap),
+        dump: new Uint8Array(dHeap),
+        usageVirtualTime: uWin.virtualTime,
+        usagePerfTime: uWin.perfTime,
+        dumpVirtualTime: dWin.virtualTime,
+        dumpPerfTime: dWin.perfTime
+      }
+      setSnapshots(prev => [...prev, newSnapshot])
+      console.log("Snapshot taken:", newSnapshot.name)
+    } else {
+      console.warn("Could not take snapshot: missing heap")
+    }
+  }
+
+  const restoreSnapshot = (id?: string) => {
+    const snap = id ? snapshots.find(s => s.id === id) : snapshots[snapshots.length - 1]
+    const uWin = usageWinRef.current
+    const dWin = dumpWinRef.current
+    if (!snap || !uWin || !dWin) {
+      console.warn("Could not restore snapshot: missing snap or windows")
+      return
+    }
+
+    const uHeap = uWin.Module?.HEAPU8 || (uWin.Module?.wasmMemory ? new Uint8Array(uWin.Module.wasmMemory.buffer) : null)
+    const dHeap = dWin.Module?.HEAPU8 || (dWin.Module?.wasmMemory ? new Uint8Array(dWin.Module.wasmMemory.buffer) : null)
+
+    if (uHeap && dHeap) {
+      uHeap.set(snap.usage)
+      dHeap.set(snap.dump)
+      uWin.virtualTime = snap.usageVirtualTime
+      uWin.perfTime = snap.usagePerfTime
+      dWin.virtualTime = snap.dumpVirtualTime
+      dWin.perfTime = snap.dumpPerfTime
+      console.log("Snapshot restored:", snap.name)
+
+      // Force exactly one frame to render so the visual state updates
+      if (isPausedRef.current) {
+        forceTickRef.current?.(true)
+      }
+    } else {
+      console.warn("Could not restore snapshot: missing heap")
+    }
+  }
+
+  const renameSnapshot = (id: string, newName: string) => {
+    setSnapshots(prev => prev.map(s => s.id === id ? { ...s, name: newName } : s))
+  }
+
+  const deleteSnapshot = (id: string) => {
+    setSnapshots(prev => prev.filter(s => s.id !== id))
+  }
 
   useEffect(() => {
     isPausedRef.current = isPaused
@@ -56,9 +137,14 @@ export const useSandboxEngine = () => {
     let usageCanvas: any = null
     let dumpCanvas: any = null
 
-    const tryTick = () => {
+    const updateWinRefs = () => {
+      usageWinRef.current = usageWin
+      dumpWinRef.current = dumpWin
+    }
+
+    const tryTick = (force = false) => {
       if (cbUsage && cbDump) {
-        if (isPausedRef.current) {
+        if (isPausedRef.current && !force) {
           return
         }
 
@@ -81,12 +167,12 @@ export const useSandboxEngine = () => {
           d(dumpWin ? dumpWin.perfTime : now)
         }
 
-        if (speedRef.current === 1) {
+        if (speedRef.current === 1 && !force) {
           window.requestAnimationFrame(executeTick)
         } else {
           setTimeout(
             () => executeTick(performance.now()),
-            1000 / (60 * speedRef.current)
+            force ? 0 : 1000 / (60 * speedRef.current)
           )
         }
       }
@@ -104,6 +190,7 @@ export const useSandboxEngine = () => {
           tryTick()
           return 1
         }
+        updateWinRefs()
 
         const events = [
           "keydown",
@@ -210,6 +297,7 @@ export const useSandboxEngine = () => {
           tryTick()
           return 1
         }
+        updateWinRefs()
       }
     }
 
@@ -317,5 +405,10 @@ export const useSandboxEngine = () => {
     handleIframeLoad,
     isPaused,
     setIsPaused,
+    takeSnapshot,
+    restoreSnapshot,
+    snapshots,
+    renameSnapshot,
+    deleteSnapshot,
   }
 }
