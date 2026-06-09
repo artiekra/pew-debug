@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 import { TourProvider } from "@/components/tour"
+import { MobileWarning } from "@/components/mobile-warning"
 
 const manropeHeading = Manrope({
   subsets: ["latin"],
@@ -39,7 +40,10 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-neutral-950 font-sans text-neutral-50 selection:bg-primary/30">
         <ThemeProvider forcedTheme="dark">
-          <TourProvider>{children}</TourProvider>
+          <TourProvider>
+            {children}
+            <MobileWarning />
+          </TourProvider>
         </ThemeProvider>
       </body>
     </html>
