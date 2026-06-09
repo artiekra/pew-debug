@@ -1,49 +1,55 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react"
 
 export interface Settings {
-  showFunctions: boolean;
-  formatColors: boolean;
-  showDebugInfo: boolean;
+  showFunctions: boolean
+  formatColors: boolean
+  showDebugInfo: boolean
 }
 
 const defaultSettings: Settings = {
   showFunctions: true,
   formatColors: true,
   showDebugInfo: true,
-};
+}
 
 export interface SettingsContextType extends Settings {
-  updateSettings: (newSettings: Partial<Settings>) => void;
+  updateSettings: (newSettings: Partial<Settings>) => void
 }
 
 const SettingsContext = createContext<SettingsContextType>({
   ...defaultSettings,
   updateSettings: () => {},
-});
+})
 
-export const useSettings = () => useContext(SettingsContext);
+export const useSettings = () => useContext(SettingsContext)
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [settings, setSettings] = useState<Settings>(defaultSettings)
+  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem("pewpew-settings");
+    const saved = localStorage.getItem("pewpew-settings")
     if (saved) {
       try {
-        setSettings({ ...defaultSettings, ...JSON.parse(saved) });
-      } catch (e) { }
+        setSettings({ ...defaultSettings, ...JSON.parse(saved) })
+      } catch (e) {}
     }
-    setIsLoaded(true);
-  }, []);
+    setIsLoaded(true)
+  }, [])
 
   const updateSettings = (updates: Partial<Settings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...updates };
-      localStorage.setItem("pewpew-settings", JSON.stringify(updated));
-      return updated;
-    });
-  };
+    setSettings((prev) => {
+      const updated = { ...prev, ...updates }
+      localStorage.setItem("pewpew-settings", JSON.stringify(updated))
+      return updated
+    })
+  }
 
   return (
     <SettingsContext.Provider value={{ ...settings, updateSettings }}>
@@ -52,5 +58,5 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         {children}
       </div>
     </SettingsContext.Provider>
-  );
-};
+  )
+}

@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    const targetUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000";
-    
+    const targetUrl = process.env.BACKEND_URL || "http://127.0.0.1:8000"
+
     return [
       {
         source: "/inject",
@@ -12,8 +12,8 @@ const nextConfig = {
         source: "/play/:path*",
         destination: `${targetUrl}/play/:path*`,
       },
-    ];
+    ]
   },
-};
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig
