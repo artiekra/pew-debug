@@ -34,7 +34,11 @@ const JsonNode = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const isMissing = value === undefined;
-  const isFx = typeof value === "string" && /^-?\d+(?:\.\d+)?fx$/.test(value);
+  const isFxString = typeof value === "string" && /^-?\d+(?:\.\d+)?fx$/.test(value);
+  const isFxObj = value !== null && value !== undefined && typeof value === "object" && "__fx" in value;
+  const isFx = isFxString || isFxObj;
+  const fxDisplayValue = isFxString ? value : (isFxObj ? `${String(value.__fx).replace(/fx$/, '')}fx` : "");
+
   const isObject = !isMissing && !isFx && value !== null && typeof value === "object";
   const isEmpty = isObject && Object.keys(value).length === 0;
 
@@ -74,14 +78,14 @@ const JsonNode = ({
         <div className={`${isObject && !isEmpty && !isMissing ? "" : "ml-0 pl-[2px]"} flex flex-wrap items-center relative w-full`}>
           {nodeKey && (
             <span className={`font-medium mr-2 ${isFavouriteNode ? 'text-yellow-400 drop-shadow-[0_0_2px_rgba(250,204,21,0.4)]' : 'text-cyan-400 drop-shadow-[0_0_2px_rgba(34,211,238,0.4)]'}`}>
-              {isFavouriteNode ? path.join('.') : nodeKey}:
+              {isFavouriteNode ? path.map(p => p.replace(/_\d+$/, '')).join('.') : nodeKey.replace(/_\d+$/, '')}:
             </span>
           )}
           
           {isMissing ? (
             <span className="text-muted-foreground/60 italic text-xs">unavailable</span>
           ) : isFx ? (
-            <span className="text-purple-400 font-medium drop-shadow-[0_0_2px_rgba(192,132,252,0.4)]">{value}</span>
+            <span className="text-purple-400 font-medium drop-shadow-[0_0_2px_rgba(192,132,252,0.4)]">{fxDisplayValue as string}</span>
           ) : isObject ? (
             isEmpty ? (
               <span className="text-muted-foreground font-semibold">{"{}"}</span>
