@@ -77,13 +77,6 @@ class Instrumenter:
             return k.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
         
         def add_sever_code(scopes_to_sever):
-            keys = []
-            for s in scopes_to_sever:
-                keys.extend(s.values())
-            if keys:
-                assigns = [f'_G.telemetryState["{escape_key(k)}"] = "#NIL#";' for k in keys]
-                code = " ".join(assigns)
-                return ast.parse(code).body.body
             return []
 
         if pre_locals:
@@ -216,7 +209,8 @@ class Instrumenter:
                 new_stmts.append(stmt)
 
         if not new_stmts or not isinstance(new_stmts[-1], (astnodes.Return, astnodes.Break)):
-            new_stmts.extend(add_sever_code([current_scope]))
+            if len(scope_stack) > 0:
+                new_stmts.extend(add_sever_code([current_scope]))
         return new_stmts
 
     def transform(self, tree):
