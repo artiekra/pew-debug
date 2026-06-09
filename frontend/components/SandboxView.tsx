@@ -17,7 +17,7 @@ import "flexlayout-react/style/alpha_dark.css"
 import { SandboxSidebar } from "./SandboxSidebar"
 import { SandboxTab } from "./SandboxTab"
 import { useSandboxEngine } from "@/hooks/useSandboxEngine"
-
+import { useTour, TourAlertDialog, TourStep } from "@/components/tour"
 interface SandboxViewProps {
   gameUrl: string
 }
@@ -84,6 +84,72 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     handleIframeLoad,
   } = useSandboxEngine()
 
+  const { setSteps, isTourCompleted, setIsTourCompleted } = useTour()
+  const [isTourDialogOpen, setIsTourDialogOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const tourDone = localStorage.getItem("sandbox_tour_completed") === "true"
+      if (tourDone) {
+        setIsTourCompleted(true)
+      } else {
+        setSteps([
+          {
+            content: (
+              <div>
+                <h3 className="mb-1 text-lg font-semibold">Memory Dump & Console</h3>
+                <p className="text-sm text-muted-foreground">You can switch between viewing the memory dump of the level and the console right here.</p>
+              </div>
+            ),
+            selectorId: "#tour-memory-console",
+            position: "left",
+          },
+          {
+            content: (
+              <div>
+                <h3 className="mb-1 text-lg font-semibold">Memory Usage & More</h3>
+                <p className="text-sm text-muted-foreground">Open memory usage stats on the sidebar. There are more tools here! Also, you can move tabs around or pop them out to float.</p>
+              </div>
+            ),
+            selectorId: "#tour-memory-usage",
+            position: "right",
+          },
+          {
+            content: (
+              <div>
+                <h3 className="mb-1 text-lg font-semibold">Settings</h3>
+                <p className="text-sm text-muted-foreground">Find your settings button down here.</p>
+              </div>
+            ),
+            selectorId: "#tour-settings",
+            position: "right",
+          },
+          {
+            content: (
+              <div>
+                <h3 className="mb-1 text-lg font-semibold">Exit Sandbox</h3>
+                <p className="text-sm text-muted-foreground">When you're done, use this exit button to upload another level.</p>
+              </div>
+            ),
+            selectorId: "#tour-exit-sandbox",
+            position: "bottom",
+          }
+        ])
+        
+        const timer = setTimeout(() => {
+          setIsTourDialogOpen(true)
+        }, 500)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [setSteps, setIsTourCompleted])
+
+  React.useEffect(() => {
+    if (isTourCompleted && typeof window !== "undefined") {
+      localStorage.setItem("sandbox_tour_completed", "true")
+    }
+  }, [isTourCompleted])
+
   const [model] = useState(() => Model.fromJson(DEFAULT_LAYOUT))
   const [, forceUpdate] = useState({})
   const tabStatesRef = React.useRef<Record<string, any>>({})
@@ -142,7 +208,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
     if (component === "memory") {
       return (
-        <div className="relative flex h-full w-full flex-col bg-black/40 backdrop-blur-xl">
+        <div id="tour-memory-console" className="relative flex h-full w-full flex-col bg-black/40 backdrop-blur-xl">
           <div className="flex-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent overflow-y-auto p-6">
             <MemoryTree data={memoryState} />
           </div>
@@ -161,7 +227,11 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     }
 
     if (component === "console") {
-      return <ConsoleTab logs={consoleLogs} />
+      return (
+        <div id="tour-memory-console" className="h-full w-full">
+          <ConsoleTab logs={consoleLogs} />
+        </div>
+      )
     }
 
     if (component === "settings") {
@@ -272,6 +342,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           onModelChange={() => forceUpdate({})}
         />
       </div>
+      <TourAlertDialog isOpen={isTourDialogOpen} setIsOpen={setIsTourDialogOpen} />
     </div>
   )
 }

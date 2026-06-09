@@ -28,6 +28,7 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
   return (
     <div className="relative h-full w-full bg-black">
       <Button
+        id="tour-exit-sandbox"
         variant="outline"
         size="sm"
         onClick={() => window.location.reload()}

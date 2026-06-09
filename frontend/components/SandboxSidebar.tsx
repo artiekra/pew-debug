@@ -135,6 +135,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
           description="Monitor memory allocations over time"
         >
           <button
+            id="tour-memory-usage"
             onClick={() =>
               toggleTab(
                 "usage-tab",
@@ -199,6 +200,7 @@ export const SandboxSidebar: React.FC<SandboxSidebarProps> = ({
           description="Configure app preferences"
         >
           <button
+            id="tour-settings"
             onClick={() =>
               toggleTab(
                 "settings-tab",

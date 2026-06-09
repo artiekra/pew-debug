@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, JetBrains_Mono, Manrope } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
+import { TourProvider } from "@/components/tour"
 
 const manropeHeading = Manrope({
   subsets: ["latin"],
@@ -37,7 +38,9 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-screen bg-neutral-950 font-sans text-neutral-50 selection:bg-primary/30">
-        <ThemeProvider forcedTheme="dark">{children}</ThemeProvider>
+        <ThemeProvider forcedTheme="dark">
+          <TourProvider>{children}</TourProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
