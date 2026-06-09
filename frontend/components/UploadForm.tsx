@@ -1,5 +1,6 @@
 import React, { useState, useRef, FormEvent } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Card,
   CardContent,
@@ -20,6 +21,8 @@ interface UploadFormProps {
 }
 
 export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
+  const [mode, setMode] = useState<"upload" | "existing">("upload")
+  const [existingSessionId, setExistingSessionId] = useState<string>("")
   const [isUploading, setIsUploading] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
@@ -41,6 +44,16 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
   const handleUpload = async (e: FormEvent) => {
     e.preventDefault()
     setErrorMsg(null)
+
+    if (mode === "existing") {
+      if (!existingSessionId.trim()) {
+        setErrorMsg("Please enter a valid session ID.")
+        return
+      }
+      onGameUrlReady(existingSessionId.trim())
+      return
+    }
+
     setIsUploading(true)
 
     const files = fileInputRef.current?.files
@@ -79,17 +92,8 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
 
   return (
     <div className="relative mx-auto mt-10 w-full max-w-lg">
-      {/* Decorative background glows */}
-      {/* <div className="absolute -top-10 -left-10 w-72 h-72 bg-primary/20 rounded-full blur-[80px] opacity-70 pointer-events-none animate-pulse"></div> */}
-      {/* <div className="absolute -bottom-10 -right-10 w-72 h-72 bg-secondary/20 rounded-full blur-[80px] opacity-70 pointer-events-none animate-pulse" style={{ animationDelay: '1s' }}></div> */}
-
       <Card className="relative overflow-hidden border-white/10 bg-black/40 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:shadow-primary/5">
-        {/* Decorative card header */}
-        {/* <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary opacity-80"></div> */}
         <CardHeader className="pt-8 pb-6 text-center">
-          {/* <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary/20 to-primary/5 border border-primary/20 shadow-inner"> */}
-          {/*   <RiFolderUploadLine className="h-8 w-8 text-primary" /> */}
-          {/* </div> */}
           <CardTitle className="flex items-center justify-center gap-2 font-heading text-2xl font-bold tracking-tight text-foreground">
             <svg
               viewBox="0 0 128 128"
@@ -110,62 +114,105 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
             Load Level Directory
           </CardTitle>
           <CardDescription className="mt-2 text-sm text-muted-foreground">
-            Select the folder containing your Lua level.
+            Select the folder containing your Lua level or enter an existing
+            session.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="px-8 pb-8">
           <form onSubmit={handleUpload} className="space-y-6">
-            <div className="group relative">
-              <input
-                id="folderInput"
-                type="file"
-                ref={fileInputRef}
-                // @ts-expect-error next/react types don't natively support webkitdirectory
-                webkitdirectory=""
-                directory=""
-                multiple
-                required
-                onChange={handleFileChange}
-                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-              />
-              <div
-                className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300 ease-out ${selectedFolder ? "border-primary/50 bg-primary/5" : "border-border bg-black/20 group-hover:border-primary/50 group-hover:bg-primary/5"}`}
+            <div className="flex w-full rounded-lg border border-white/5 bg-black/20 p-1">
+              <button
+                type="button"
+                onClick={() => setMode("upload")}
+                className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${mode === "upload" ? "bg-white/10 text-white shadow-sm" : "text-muted-foreground hover:text-white"}`}
               >
-                {selectedFolder ? (
-                  <div className="flex flex-col items-center space-y-2 text-center">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <RiFolder3Line className="h-6 w-6 text-primary" />
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      {selectedFolder}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {fileCount} files selected
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center space-y-3 text-center">
-                    <div className="rounded-full bg-white/5 p-3 transition-transform duration-300 group-hover:scale-110">
-                      <RiFolderUploadLine className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        Click to browse folder
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        There must be manifest.json file inside your folder
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+                Upload Folder
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("existing")}
+                className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${mode === "existing" ? "bg-white/10 text-white shadow-sm" : "text-muted-foreground hover:text-white"}`}
+              >
+                Existing Session
+              </button>
             </div>
+
+            {mode === "upload" ? (
+              <div className="group relative">
+                <input
+                  id="folderInput"
+                  type="file"
+                  ref={fileInputRef}
+                  // @ts-expect-error next/react types don't natively support webkitdirectory
+                  webkitdirectory=""
+                  directory=""
+                  multiple
+                  required={mode === "upload"}
+                  onChange={handleFileChange}
+                  className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                />
+                <div
+                  className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300 ease-out ${selectedFolder ? "border-primary/50 bg-primary/5" : "border-border bg-black/20 group-hover:border-primary/50 group-hover:bg-primary/5"}`}
+                >
+                  {selectedFolder ? (
+                    <div className="flex flex-col items-center space-y-2 text-center">
+                      <div className="rounded-full bg-primary/10 p-3">
+                        <RiFolder3Line className="h-6 w-6 text-primary" />
+                      </div>
+                      <span className="font-semibold text-foreground">
+                        {selectedFolder}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {fileCount} files selected
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center space-y-3 text-center">
+                      <div className="rounded-full bg-white/5 p-3 transition-transform duration-300 group-hover:scale-110">
+                        <RiFolderUploadLine className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Click to browse folder
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          There must be manifest.json file inside your folder
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2 pb-6">
+                <label
+                  htmlFor="sessionId"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Session ID
+                </label>
+                <Input
+                  id="sessionId"
+                  type="text"
+                  placeholder="Paste your copied Session ID here"
+                  value={existingSessionId}
+                  onChange={(e) => setExistingSessionId(e.target.value)}
+                  className="border-white/10 bg-black/20"
+                  required={mode === "existing"}
+                />
+              </div>
+            )}
 
             <Button
               type="submit"
               className="relative h-12 w-full overflow-hidden text-base font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] active:translate-y-0"
-              disabled={isUploading || !selectedFolder}
+              disabled={
+                isUploading ||
+                (mode === "upload"
+                  ? !selectedFolder
+                  : !existingSessionId.trim())
+              }
             >
               {isUploading ? (
                 <>
