@@ -5,7 +5,7 @@ import json
 import zipfile
 import shutil
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import Response, JSONResponse
 
 from instrument import process_file, copy_utils
@@ -14,7 +14,10 @@ router = APIRouter()
 
 
 @router.post("/inject/")
-async def process_folder(files: list[UploadFile] = File(...)) -> dict[str, str]:
+async def process_folder(
+    files: list[UploadFile] = File(...),
+    invulnerability: bool = Form(False)
+) -> dict[str, str]:
     """Inject debugging code into user level and setup utils."""
     folder_id = str(uuid.uuid4())[:8]
     base_dir = Path("storage")
@@ -42,12 +45,12 @@ async def process_folder(files: list[UploadFile] = File(...)) -> dict[str, str]:
         # process for dump
         dump_dest = dump_dir / "levels" / safe_path.parent / safe_path.name
         dump_dest.parent.mkdir(parents=True, exist_ok=True)
-        process_file(temp_file_path, dump_dest, file_id, safe_path.name, mode="dump")
+        process_file(temp_file_path, dump_dest, file_id, safe_path.name, mode="dump", invulnerability=invulnerability)
         
         # process for usage
         usage_dest = usage_dir / "levels" / safe_path.parent / safe_path.name
         usage_dest.parent.mkdir(parents=True, exist_ok=True)
-        process_file(temp_file_path, usage_dest, file_id, safe_path.name, mode="usage")
+        process_file(temp_file_path, usage_dest, file_id, safe_path.name, mode="usage", invulnerability=invulnerability)
         
         temp_file_path.unlink()
 

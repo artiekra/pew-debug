@@ -13,6 +13,12 @@ if not _G.__telemetry_installed_usage then
                 if is_report_tick then
                     local current_mem = collectgarbage("count")
                     print("__MEM_USAGE__", current_mem)
+
+                    if _G.__invulnerable_ships and _G.__orig_make_player_ship_transparent then
+                        for ship_id, _ in pairs(_G.__invulnerable_ships) do
+                            pcall(_G.__orig_make_player_ship_transparent, ship_id, 300)
+                        end
+                    end
                 end
             end)
         end

@@ -49,7 +49,7 @@ def instrument_lua_file(code: str, file_id: str, mode: str = "dump") -> str:
         return interceptor_payload + "\n" + code
 
 
-def process_file(file_path: Path, destination: Path, file_id: str, name: str, mode: str = "dump") -> None:
+def process_file(file_path: Path, destination: Path, file_id: str, name: str, mode: str = "dump", invulnerability: bool = False) -> None:
     """Instruments a lua file or copies assets directly."""
     try:
         with open(file_path, "r", encoding="utf-8") as f_in:
@@ -62,6 +62,9 @@ def process_file(file_path: Path, destination: Path, file_id: str, name: str, mo
             original_content = instrument_lua_file(original_content, file_id, mode)
             
             if name == "level.lua":
+                if invulnerability:
+                    invuln_code = read_lua_file("invulnerability.lua")
+                    original_content = invuln_code + '\n' + original_content
                 notice_content = read_lua_file("notice.lua")
                 original_content = notice_content + '\n' + original_content
 

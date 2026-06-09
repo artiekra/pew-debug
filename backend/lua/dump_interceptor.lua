@@ -11,12 +11,12 @@ if not _G.__telemetry_installed then
             ["\\"] = "\\\\",
             ['"'] = '\\"',
             ["\n"] = "\\n",
-            ["\r"] = ""
+            ["\r"] = "",
         }
-        
+
         pewpew.add_update_callback = function(user_callback)
             local __tick_count = 0
-            
+
             local __phase = 0
             local __dump = nil
             local __current_snapshot = nil
@@ -33,6 +33,12 @@ if not _G.__telemetry_installed then
                 if __tick_count % 15 == 0 then
                     local entities = pewpew.get_all_entities()
                     print("__TICK_DATA__", __tick_count, #entities)
+
+                    if _G.__invulnerable_ships and _G.__orig_make_player_ship_transparent then
+                        for ship_id, _ in pairs(_G.__invulnerable_ships) do
+                            pcall(_G.__orig_make_player_ship_transparent, ship_id, 300)
+                        end
+                    end
                 end
 
                 if __phase == 0 then
@@ -70,7 +76,12 @@ if not _G.__telemetry_installed then
                         end
                     end
                     for k, v in pairs(_G) do
-                        if not _G.__baseline_G[k] and k ~= "telemetryState" and type(k) == "string" and not k:match("^__") then
+                        if
+                            not _G.__baseline_G[k]
+                            and k ~= "telemetryState"
+                            and type(k) == "string"
+                            and not k:match("^__")
+                        then
                             if v ~= "#NIL#" then
                                 __dump.Globals[k] = v
                             end
@@ -85,7 +96,9 @@ if not _G.__telemetry_installed then
                         elseif t == "function" or t == "userdata" or t == "thread" then
                             return tostring(val)
                         elseif t == "table" then
-                            if seen[val] then return nil end
+                            if seen[val] then
+                                return nil
+                            end
                             seen[val] = true
 
                             local res = {}
@@ -105,12 +118,13 @@ if not _G.__telemetry_installed then
                     end
                     __current_snapshot = make_snapshot(__dump)
                     __phase = 2
-
                 elseif __phase == 2 then
                     -- Phase 2: Compute Delta
                     local function compute_delta(old, new)
                         if type(old) ~= "table" or type(new) ~= "table" then
-                            if old == new then return nil, false end
+                            if old == new then
+                                return nil, false
+                            end
                             return new, true
                         end
 
@@ -155,17 +169,16 @@ if not _G.__telemetry_installed then
                         __has_changes = true
                     end
                     _G.__last_memory_snapshot = __current_snapshot
-                    
+
                     if not __has_changes then
                         __phase = 0
                     else
                         __phase = 3
                     end
-
                 elseif __phase == 3 then
                     -- Phase 3: Flattened JSON Assembly
                     __out_flat = {}
-                    
+
                     local function escape_str(s)
                         return '"' .. tostring(s):gsub('["\\\n\r]', escape_map) .. '"'
                     end
@@ -193,10 +206,10 @@ if not _G.__telemetry_installed then
                             table.insert(__out_flat, "null")
                         end
                     end
-                    
+
                     snapshot_to_json_flat(__delta_tree)
                     local full_json = table.concat(__out_flat)
-                    
+
                     __json_chunks = {}
                     local chunk_size = 6000
                     if #full_json <= chunk_size then
@@ -213,10 +226,9 @@ if not _G.__telemetry_installed then
                             end
                         end
                     end
-                    
+
                     __print_idx = 1
                     __phase = 4
-
                 elseif __phase == 4 then
                     -- Phase 4: Sliced Printing
                     if __print_idx <= #__json_chunks then

@@ -27,6 +27,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [fileCount, setFileCount] = useState<number>(0)
+  const [invulnerability, setInvulnerability] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = () => {
@@ -68,6 +69,7 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
       const file = files[i]
       formData.append("files", file, file.webkitRelativePath)
     }
+    formData.append("invulnerability", String(invulnerability))
 
     try {
       // hitting the proxy route defined in next.config.js
@@ -139,49 +141,67 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
             </div>
 
             {mode === "upload" ? (
-              <div className="group relative">
-                <input
-                  id="folderInput"
-                  type="file"
-                  ref={fileInputRef}
-                  // @ts-expect-error next/react types don't natively support webkitdirectory
-                  webkitdirectory=""
-                  directory=""
-                  multiple
-                  required={mode === "upload"}
-                  onChange={handleFileChange}
-                  className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                />
-                <div
-                  className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300 ease-out ${selectedFolder ? "border-primary/50 bg-primary/5" : "border-border bg-black/20 group-hover:border-primary/50 group-hover:bg-primary/5"}`}
-                >
-                  {selectedFolder ? (
-                    <div className="flex flex-col items-center space-y-2 text-center">
-                      <div className="rounded-full bg-primary/10 p-3">
-                        <RiFolder3Line className="h-6 w-6 text-primary" />
+              <div className="space-y-4">
+                <div className="group relative">
+                  <input
+                    id="folderInput"
+                    type="file"
+                    ref={fileInputRef}
+                    // @ts-expect-error next/react types don't natively support webkitdirectory
+                    webkitdirectory=""
+                    directory=""
+                    multiple
+                    required={mode === "upload"}
+                    onChange={handleFileChange}
+                    className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                  />
+                  <div
+                    className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300 ease-out ${selectedFolder ? "border-primary/50 bg-primary/5" : "border-border bg-black/20 group-hover:border-primary/50 group-hover:bg-primary/5"}`}
+                  >
+                    {selectedFolder ? (
+                      <div className="flex flex-col items-center space-y-2 text-center">
+                        <div className="rounded-full bg-primary/10 p-3">
+                          <RiFolder3Line className="h-6 w-6 text-primary" />
+                        </div>
+                        <span className="font-semibold text-foreground">
+                          {selectedFolder}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {fileCount} files selected
+                        </span>
                       </div>
-                      <span className="font-semibold text-foreground">
-                        {selectedFolder}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {fileCount} files selected
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center space-y-3 text-center">
-                      <div className="rounded-full bg-white/5 p-3 transition-transform duration-300 group-hover:scale-110">
-                        <RiFolderUploadLine className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
+                    ) : (
+                      <div className="flex flex-col items-center space-y-3 text-center">
+                        <div className="rounded-full bg-white/5 p-3 transition-transform duration-300 group-hover:scale-110">
+                          <RiFolderUploadLine className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            Click to browse folder
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            There must be manifest.json file inside your folder
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          Click to browse folder
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          There must be manifest.json file inside your folder
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 rounded-xl border border-white/5 bg-black/20 px-4 py-3 transition-all hover:border-primary/30">
+                  <input
+                    type="checkbox"
+                    id="invulnerability"
+                    checked={invulnerability}
+                    onChange={(e) => setInvulnerability(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-black/40 text-primary transition-all focus:ring-1 focus:ring-primary focus:ring-offset-0"
+                  />
+                  <label
+                    htmlFor="invulnerability"
+                    className="cursor-pointer text-sm font-medium text-foreground"
+                  >
+                    Player Invulnerability
+                  </label>
                 </div>
               </div>
             ) : (
