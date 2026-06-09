@@ -1,4 +1,54 @@
 let memoryBuffer = ""
+let lastState: any = null
+
+function processDelta(jsonStr: string) {
+  jsonStr = jsonStr.replace(
+    /"(?:[^"\\]|\\.)*"|(-?\d+(?:\.\d+)?)fx/g,
+    (match: string, fxGroup: string) => {
+      if (fxGroup !== undefined) {
+        return `{"__fx":"${fxGroup}"}`
+      }
+      return match
+    }
+  )
+
+  const delta = JSON.parse(jsonStr)
+
+  if (!lastState) {
+    lastState = delta
+  } else {
+    const mergeDelta = (target: any, patch: any) => {
+      if (typeof target !== "object" || target === null) {
+        return patch
+      }
+      for (const key in patch) {
+        if (patch[key] === "__DELETE__") {
+          delete target[key]
+        } else if (
+          typeof patch[key] === "object" &&
+          patch[key] !== null &&
+          !("__fx" in patch[key])
+        ) {
+          if (
+            typeof target[key] !== "object" ||
+            target[key] === null ||
+            "__fx" in target[key]
+          ) {
+            target[key] = patch[key]
+          } else {
+            target[key] = mergeDelta(target[key], patch[key])
+          }
+        } else {
+          target[key] = patch[key]
+        }
+      }
+      return target
+    }
+    lastState = mergeDelta(lastState, delta)
+  }
+
+  self.postMessage({ type: "memory_state", state: lastState })
+}
 
 self.addEventListener("message", (e) => {
   const { type, line } = e.data
@@ -28,6 +78,7 @@ self.addEventListener("message", (e) => {
           }
         }
       } else if (line.includes("__LEVEL_START__")) {
+        lastState = null
         self.postMessage({ type: "level_start" })
       } else if (line.includes("__MEM_START__")) {
         const jsonStartIndex = line.indexOf("__MEM_START__") + 13
@@ -39,18 +90,7 @@ self.addEventListener("message", (e) => {
         const jsonStartIndex = line.indexOf("__MEM_END__") + 11
         memoryBuffer += line.substring(jsonStartIndex)
         try {
-          let jsonStr = memoryBuffer
-          jsonStr = jsonStr.replace(
-            /"(?:[^"\\]|\\.)*"|(-?\d+(?:\.\d+)?)fx/g,
-            (match: string, fxGroup: string) => {
-              if (fxGroup !== undefined) {
-                return `{"__fx":"${fxGroup}"}`
-              }
-              return match
-            }
-          )
-          const state = JSON.parse(jsonStr)
-          self.postMessage({ type: "memory_state", state })
+          processDelta(memoryBuffer)
         } catch (err) {
           self.postMessage({
             type: "parse_error",
@@ -62,20 +102,8 @@ self.addEventListener("message", (e) => {
       } else if (line.includes("__MEM__")) {
         try {
           const jsonStartIndex = line.indexOf("__MEM__") + 7
-          let jsonStr = line.substring(jsonStartIndex)
-
-          jsonStr = jsonStr.replace(
-            /"(?:[^"\\]|\\.)*"|(-?\d+(?:\.\d+)?)fx/g,
-            (match: string, fxGroup: string) => {
-              if (fxGroup !== undefined) {
-                return `{"__fx":"${fxGroup}"}`
-              }
-              return match
-            }
-          )
-
-          const state = JSON.parse(jsonStr)
-          self.postMessage({ type: "memory_state", state })
+          const jsonStr = line.substring(jsonStartIndex)
+          processDelta(jsonStr)
         } catch (err) {
           self.postMessage({
             type: "parse_error",

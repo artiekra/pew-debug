@@ -19,17 +19,12 @@ if not _G.__telemetry_installed then
                     print("__TICK_DATA__", __tick_count, #entities)
 
                     local seen = {}
-                    local function to_json(val)
+                    local function make_snapshot(val)
                         local t = type(val)
-                        if t == "string" then
-                            local escaped = val:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "")
-                            return '"' .. escaped .. '"'
-                        elseif t == "number" or t == "boolean" then
-                            return tostring(val)
-                        elseif t == "nil" then
-                            return "null"
+                        if t == "string" or t == "number" or t == "boolean" then
+                            return val
                         elseif t == "function" or t == "userdata" or t == "thread" then
-                            return '"' .. tostring(val) .. '"'
+                            return tostring(val)
                         elseif t == "table" then
                             if seen[val] then
                                 return nil
@@ -39,23 +34,82 @@ if not _G.__telemetry_installed then
                             local res = {}
                             for k, v in pairs(val) do
                                 if type(k) == "string" or type(k) == "number" or type(k) == "boolean" then
-                                    local key_str
-                                    if type(k) == "string" then
-                                        key_str = '"'
-                                            .. k:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "")
-                                            .. '"'
-                                    else
-                                        key_str = '"' .. tostring(k):gsub('"', '\\"') .. '"'
+                                    local key_str = tostring(k)
+                                    local sv = make_snapshot(v)
+                                    if sv ~= nil then
+                                        res[key_str] = sv
                                     end
-                                    local val_json = to_json(v)
-                                    if val_json ~= nil then
-                                        table.insert(res, key_str .. ":" .. val_json)
+                                end
+                            end
+                            return res
+                        else
+                            return "#UNSUPPORTED#"
+                        end
+                    end
+
+                    local function compute_delta(old, new)
+                        if type(old) ~= "table" or type(new) ~= "table" then
+                            if old == new then
+                                return nil, false
+                            end
+                            return new, true
+                        end
+
+                        local delta = {}
+                        local has_changes = false
+
+                        for k, v in pairs(old) do
+                            if new[k] == nil then
+                                delta[k] = "__DELETE__"
+                                has_changes = true
+                            end
+                        end
+
+                        for k, v in pairs(new) do
+                            local old_v = old[k]
+                            if old_v == nil then
+                                delta[k] = v
+                                has_changes = true
+                            else
+                                if type(v) == "table" and type(old_v) == "table" then
+                                    local sub_delta, sub_changed = compute_delta(old_v, v)
+                                    if sub_changed then
+                                        delta[k] = sub_delta
+                                        has_changes = true
                                     end
+                                else
+                                    if v ~= old_v then
+                                        delta[k] = v
+                                        has_changes = true
+                                    end
+                                end
+                            end
+                        end
+
+                        return delta, has_changes
+                    end
+
+                    local function snapshot_to_json(val)
+                        local t = type(val)
+                        if t == "string" then
+                            local escaped = val:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "")
+                            return '"' .. escaped .. '"'
+                        elseif t == "number" or t == "boolean" then
+                            return tostring(val)
+                        elseif t == "table" then
+                            local res = {}
+                            for k, v in pairs(val) do
+                                local key_str = '"'
+                                    .. tostring(k):gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "")
+                                    .. '"'
+                                local val_json = snapshot_to_json(v)
+                                if val_json ~= nil then
+                                    table.insert(res, key_str .. ":" .. val_json)
                                 end
                             end
                             return "{" .. table.concat(res, ",") .. "}"
                         else
-                            return '"#UNSUPPORTED#"'
+                            return "null"
                         end
                     end
 
@@ -94,9 +148,24 @@ if not _G.__telemetry_installed then
                         end
                     end
 
-                    local json_str = to_json(dump)
+                    local current_snapshot = make_snapshot(dump)
+                    local delta_tree
 
-                    local chunk_size = 3000
+                    if _G.__last_memory_snapshot then
+                        local d, changed = compute_delta(_G.__last_memory_snapshot, current_snapshot)
+                        if not changed then
+                            return
+                        end
+                        delta_tree = d
+                    else
+                        delta_tree = current_snapshot
+                    end
+
+                    _G.__last_memory_snapshot = current_snapshot
+
+                    local json_str = snapshot_to_json(delta_tree)
+
+                    local chunk_size = 6000
                     if #json_str <= chunk_size then
                         print("__MEM__" .. json_str)
                     else
