@@ -23,18 +23,6 @@ export const ConsoleTab = ({ logs }: { logs: ConsoleMessage[] }) => {
             let bg = ""
             let border = "border-white/5"
 
-            if (log.type === "error") {
-              color = "text-red-400"
-              bg = "bg-red-500/10"
-              border = "border-red-500/20"
-            } else if (log.type === "warn") {
-              color = "text-yellow-400"
-              bg = "bg-yellow-500/10"
-              border = "border-yellow-500/20"
-            } else if (log.type === "info") {
-              color = "text-blue-400"
-            }
-
             return (
               <div
                 key={i}
