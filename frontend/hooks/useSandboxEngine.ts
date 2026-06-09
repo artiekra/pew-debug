@@ -211,6 +211,8 @@ export const useSandboxEngine = () => {
       const targetWindow = iframe.contentWindow as any
       if (!targetWindow) return
 
+      const isUsageFrame = iframe.src.includes("_usage")
+
       const originalLog = targetWindow.console.log
       const originalWarn = targetWindow.console.warn
       const originalError = targetWindow.console.error
@@ -234,38 +236,46 @@ export const useSandboxEngine = () => {
         } else {
           // pass normal logs through
           originalLog.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "log", message: logLine },
-          ])
+          if (isUsageFrame) {
+            setConsoleLogs((prev) => [
+              ...prev.slice(-999),
+              { type: "log", message: logLine },
+            ])
+          }
         }
       }
 
       if (originalWarn) {
         targetWindow.console.warn = (...args: any[]) => {
           originalWarn.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "warn", message: args.join(" ") },
-          ])
+          if (isUsageFrame) {
+            setConsoleLogs((prev) => [
+              ...prev.slice(-999),
+              { type: "warn", message: args.join(" ") },
+            ])
+          }
         }
       }
       if (originalError) {
         targetWindow.console.error = (...args: any[]) => {
           originalError.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "error", message: args.join(" ") },
-          ])
+          if (isUsageFrame) {
+            setConsoleLogs((prev) => [
+              ...prev.slice(-999),
+              { type: "error", message: args.join(" ") },
+            ])
+          }
         }
       }
       if (originalInfo) {
         targetWindow.console.info = (...args: any[]) => {
           originalInfo.apply(targetWindow.console, args)
-          setConsoleLogs((prev) => [
-            ...prev.slice(-999),
-            { type: "info", message: args.join(" ") },
-          ])
+          if (isUsageFrame) {
+            setConsoleLogs((prev) => [
+              ...prev.slice(-999),
+              { type: "info", message: args.join(" ") },
+            ])
+          }
         }
       }
     } catch (err) {
@@ -276,11 +286,16 @@ export const useSandboxEngine = () => {
     }
   }
 
+  const clearConsole = () => {
+    setConsoleLogs([])
+  }
+
   return {
     memoryState,
     memoryUsage,
     tickData,
     consoleLogs,
+    clearConsole,
     speedhackMultiplier,
     setSpeedhackMultiplier,
     handleIframeLoad,

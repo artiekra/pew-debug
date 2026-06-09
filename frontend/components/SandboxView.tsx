@@ -79,6 +79,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     memoryUsage,
     tickData,
     consoleLogs,
+    clearConsole,
     speedhackMultiplier,
     setSpeedhackMultiplier,
     handleIframeLoad,
@@ -247,7 +248,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     if (component === "console") {
       return (
         <div id="tour-memory-console" className="h-full w-full">
-          <ConsoleTab logs={consoleLogs} />
+          <ConsoleTab logs={consoleLogs} onClear={clearConsole} />
         </div>
       )
     }
