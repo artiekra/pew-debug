@@ -12,9 +12,10 @@ from instrument import process_file, copy_utils
 
 router = APIRouter()
 
+
 @router.post("/inject/")
 async def process_folder(files: list[UploadFile] = File(...)) -> dict[str, str]:
-    """Inject debugging code into user level and setup symlinks."""
+    """Inject debugging code into user level and setup utils."""
     folder_id = str(uuid.uuid4())[:8]
     base_dir = Path("storage")
     
