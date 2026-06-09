@@ -97,8 +97,13 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           {
             content: (
               <div>
-                <h3 className="mb-1 text-lg font-semibold">Memory Dump & Console</h3>
-                <p className="text-sm text-muted-foreground">You can switch between viewing the memory dump of the level and the console right here.</p>
+                <h3 className="mb-1 text-lg font-semibold">
+                  Memory Dump & Console
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  You can switch between viewing the memory dump of the level
+                  and the console right here.
+                </p>
               </div>
             ),
             selectorId: "#tour-memory-console",
@@ -107,8 +112,13 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           {
             content: (
               <div>
-                <h3 className="mb-1 text-lg font-semibold">Memory Usage & More</h3>
-                <p className="text-sm text-muted-foreground">Open memory usage stats on the sidebar. There are more tools here! Also, you can move tabs around or pop them out to float.</p>
+                <h3 className="mb-1 text-lg font-semibold">
+                  Memory Usage & More
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Open memory usage stats on the sidebar. There are more tools
+                  here! Also, you can move tabs around or pop them out to float.
+                </p>
               </div>
             ),
             selectorId: "#tour-memory-usage",
@@ -118,7 +128,9 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
             content: (
               <div>
                 <h3 className="mb-1 text-lg font-semibold">Settings</h3>
-                <p className="text-sm text-muted-foreground">Find your settings button down here.</p>
+                <p className="text-sm text-muted-foreground">
+                  Find your settings button down here.
+                </p>
               </div>
             ),
             selectorId: "#tour-settings",
@@ -128,14 +140,17 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
             content: (
               <div>
                 <h3 className="mb-1 text-lg font-semibold">Exit Sandbox</h3>
-                <p className="text-sm text-muted-foreground">When you're done, use this exit button to upload another level.</p>
+                <p className="text-sm text-muted-foreground">
+                  When you're done, use this exit button to upload another
+                  level.
+                </p>
               </div>
             ),
             selectorId: "#tour-exit-sandbox",
             position: "bottom",
-          }
+          },
         ])
-        
+
         const timer = setTimeout(() => {
           setIsTourDialogOpen(true)
         }, 500)
@@ -208,9 +223,12 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
     if (component === "memory") {
       return (
-        <div id="tour-memory-console" className="relative flex h-full w-full flex-col bg-black/40 backdrop-blur-xl">
+        <div
+          id="tour-memory-console"
+          className="relative flex h-full w-full flex-col bg-black/40 backdrop-blur-xl"
+        >
           <div className="flex-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent overflow-y-auto p-6">
-            <MemoryTree data={memoryState} />
+            <MemoryTree data={memoryState} levelId={gameUrl} />
           </div>
         </div>
       )
@@ -342,7 +360,10 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
           onModelChange={() => forceUpdate({})}
         />
       </div>
-      <TourAlertDialog isOpen={isTourDialogOpen} setIsOpen={setIsTourDialogOpen} />
+      <TourAlertDialog
+        isOpen={isTourDialogOpen}
+        setIsOpen={setIsTourDialogOpen}
+      />
     </div>
   )
 }

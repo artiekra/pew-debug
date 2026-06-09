@@ -200,20 +200,28 @@ const JsonNode = ({
 }
 
 /** displays the live memory state using our recursive node component. */
-export const MemoryTree = ({ data }: { data: any }) => {
+export const MemoryTree = ({
+  data,
+  levelId,
+}: {
+  data: any
+  levelId: string
+}) => {
   const settings = useSettings()
   const [favourites, setFavourites] = useState<string[][]>([])
 
   useEffect(() => {
-    const saved = localStorage.getItem("pewpew-memory-favourites")
+    const saved = localStorage.getItem(`pewpew-memory-favourites-${levelId}`)
     if (saved) {
       try {
         setFavourites(JSON.parse(saved))
       } catch (e) {
         // ignore
       }
+    } else {
+      setFavourites([])
     }
-  }, [])
+  }, [levelId])
 
   if (!data) {
     return (
@@ -235,7 +243,10 @@ export const MemoryTree = ({ data }: { data: any }) => {
       } else {
         newFavs = [...prev, path]
       }
-      localStorage.setItem("pewpew-memory-favourites", JSON.stringify(newFavs))
+      localStorage.setItem(
+        `pewpew-memory-favourites-${levelId}`,
+        JSON.stringify(newFavs)
+      )
       return newFavs
     })
   }
