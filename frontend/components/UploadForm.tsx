@@ -1,4 +1,4 @@
-import React, { useState, useRef, FormEvent } from "react"
+import React, { useState, useRef, FormEvent, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -16,6 +16,34 @@ import {
   RiAlertLine,
 } from "@remixicon/react"
 
+interface SessionRecord {
+  id: string
+  name: string
+  time: number
+}
+
+const PewPewText = ({ text }: { text: string }) => {
+  if (!text) return null
+  const parts = text.split(/(#[0-9a-fA-F]{8})/i)
+  const elements = []
+  let currentColor = "#ffffff"
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]
+    if (/^#[0-9a-fA-F]{8}$/i.test(part)) {
+      currentColor = part
+    } else if (part) {
+      elements.push(
+        <span key={i} style={{ color: currentColor }}>
+          {part}
+        </span>
+      )
+    }
+  }
+
+  return <>{elements}</>
+}
+
 interface UploadFormProps {
   onGameUrlReady: (url: string) => void
 }
@@ -28,7 +56,19 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [fileCount, setFileCount] = useState<number>(0)
   const [invulnerability, setInvulnerability] = useState<boolean>(false)
+  const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("pewpew_sessions")
+      if (stored) {
+        setRecentSessions(JSON.parse(stored))
+      }
+    } catch (e) {
+      console.error("Failed to parse sessions", e)
+    }
+  }, [])
 
   const handleFileChange = () => {
     const files = fileInputRef.current?.files
@@ -64,6 +104,22 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
       return
     }
 
+    let levelName = "Unknown Level"
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].name === "manifest.json") {
+        try {
+          const text = await files[i].text()
+          const manifest = JSON.parse(text)
+          if (manifest.name) {
+            levelName = manifest.name
+          }
+        } catch (err) {
+          console.error("Failed to parse manifest.json", err)
+        }
+        break
+      }
+    }
+
     const formData = new FormData()
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -83,6 +139,26 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
       }
 
       const data = await response.json()
+
+      const newSession: SessionRecord = {
+        id: data.id,
+        name: levelName,
+        time: Date.now(),
+      }
+      try {
+        const existingStr = localStorage.getItem("pewpew_sessions")
+        let sessions: SessionRecord[] = existingStr
+          ? JSON.parse(existingStr)
+          : []
+        sessions = sessions.filter((s) => s.id !== data.id)
+        sessions.unshift(newSession)
+        if (sessions.length > 5) sessions = sessions.slice(0, 5)
+        localStorage.setItem("pewpew_sessions", JSON.stringify(sessions))
+        setRecentSessions(sessions)
+      } catch (e) {
+        console.error("Failed to save session", e)
+      }
+
       onGameUrlReady(data.id)
     } catch (err: any) {
       console.error("upload failed:", err)
@@ -205,22 +281,62 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3 pt-2 pb-6">
-                <label
-                  htmlFor="sessionId"
-                  className="text-sm font-medium text-foreground"
-                >
-                  Session ID
-                </label>
-                <Input
-                  id="sessionId"
-                  type="text"
-                  placeholder="Paste your copied Session ID here"
-                  value={existingSessionId}
-                  onChange={(e) => setExistingSessionId(e.target.value)}
-                  className="border-white/10 bg-black/20"
-                  required={mode === "existing"}
-                />
+              <div className="space-y-4 pt-2 pb-6">
+                <div className="space-y-3">
+                  <label
+                    htmlFor="sessionId"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    Session ID
+                  </label>
+                  <Input
+                    id="sessionId"
+                    type="text"
+                    placeholder="Paste your copied Session ID here"
+                    value={existingSessionId}
+                    onChange={(e) => setExistingSessionId(e.target.value)}
+                    className="border-white/10 bg-black/20"
+                    required={mode === "existing"}
+                  />
+                </div>
+
+                {recentSessions.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Recent Sessions
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      {recentSessions.map((session) => (
+                        <div
+                          key={session.id}
+                          onClick={() => setExistingSessionId(session.id)}
+                          className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all ${
+                            existingSessionId === session.id
+                              ? "border-primary/50 bg-black"
+                              : "border-white/5 bg-black hover:border-white/20"
+                          }`}
+                        >
+                          <div className="flex flex-col overflow-hidden">
+                            <span className="truncate text-sm font-medium">
+                              <PewPewText text={session.name} />
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {session.id}
+                            </span>
+                          </div>
+                          <span className="ml-4 shrink-0 text-xs text-muted-foreground">
+                            {new Date(session.time).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
