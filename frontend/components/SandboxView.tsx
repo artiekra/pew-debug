@@ -389,8 +389,17 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
       }
 
       if (!saved && isFloat) {
-        const width = 400
-        const height = 300
+        let width = 400
+        let height = 300
+
+        if (id === "settings-tab") {
+          width = 300
+          height = 240
+        } else if (id === "speedhack-tab") {
+          width = 500
+          height = 500
+        }
+
         const left = (window.innerWidth - width) / 2
         const top = (window.innerHeight - height) / 2
 
