@@ -21,13 +21,6 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api/v1")
 
-
-@app.get("/")
-async def serve_dashboard() -> FileResponse:
-    """serves the main frontend upload dashboard."""
-    return FileResponse("index.htm")
-
-
 app.mount("/api/v1/play", StaticFiles(directory="storage"), name="play")
 
 
