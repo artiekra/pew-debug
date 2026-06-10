@@ -42,6 +42,7 @@ const MOBILE_LAYOUT: IJsonModel = {
         type: "tabset",
         weight: 100,
         id: "sandbox-tabset",
+        classNameTabStrip: "tour-memory-console-target",
         children: [
           {
             type: "tab",
@@ -99,6 +100,7 @@ const DESKTOP_LAYOUT: IJsonModel = {
         type: "tabset",
         weight: 30,
         id: "memory-tabset",
+        classNameTabStrip: "tour-memory-console-target",
         children: [
           {
             type: "tab",
@@ -175,8 +177,13 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
+      const isMobileDevice =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ) || window.innerWidth <= 768
+      
       const tourDone = localStorage.getItem("sandbox_tour_completed") === "true"
-      if (tourDone) {
+      if (tourDone || isMobileDevice) {
         setIsTourCompleted(true)
       } else {
         setSteps([
@@ -192,7 +199,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
                 </p>
               </div>
             ),
-            selectorId: "#tour-memory-console",
+            selectorId: ".tour-memory-console-target",
             position: "left",
           },
           {
@@ -221,6 +228,18 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
             ),
             selectorId: "#tour-settings",
             position: "right",
+          },
+          {
+            content: (
+              <div>
+                <h3 className="mb-1 text-lg font-semibold">Copy Session ID</h3>
+                <p className="text-sm text-muted-foreground">
+                  Copy current session ID to come back to your level later.
+                </p>
+              </div>
+            ),
+            selectorId: "#tour-copy-session-id",
+            position: "bottom",
           },
           {
             content: (
@@ -327,7 +346,6 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
     if (component === "memory") {
       return (
         <div
-          id="tour-memory-console"
           className="relative flex h-full w-full flex-col bg-black/40 backdrop-blur-xl"
         >
           <div className="flex-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent overflow-y-auto p-6">
@@ -349,7 +367,7 @@ export const SandboxView = ({ gameUrl }: SandboxViewProps) => {
 
     if (component === "console") {
       return (
-        <div id="tour-memory-console" className="h-full w-full">
+        <div className="h-full w-full">
           <ConsoleTab logs={consoleLogs} onClear={clearConsole} />
         </div>
       )

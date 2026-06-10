@@ -540,43 +540,16 @@ export function TourAlertDialog({
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogContent className="max-w-md p-6">
-        <AlertDialogHeader className="flex flex-col items-center justify-center">
-          <div className="relative mb-4">
-            <motion.div
-              initial={{ scale: 0.7, filter: "blur(10px)" }}
-              animate={{
-                scale: 1,
-                filter: "blur(0px)",
-                y: [0, -8, 0],
-                rotate: [42, 48, 42],
-              }}
-              transition={{
-                duration: 0.4,
-                ease: "easeOut",
-                y: {
-                  duration: 2.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                },
-                rotate: {
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                },
-              }}
-            >
-              <Torus className="size-32 stroke-1 text-primary" />
-            </motion.div>
-          </div>
+        <AlertDialogHeader className="items-center justify-center">
           <AlertDialogTitle className="text-center text-xl font-medium">
             Welcome to the Tour
           </AlertDialogTitle>
-          <AlertDialogDescription className="mt-2 text-center text-sm text-muted-foreground">
-            Take a quick tour to learn about the key features and functionality
-            of this application.
-          </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="mt-6 space-y-3">
+        <AlertDialogDescription className="mt-2 text-center text-sm text-muted-foreground">
+          Take a quick tour to learn about the key features and functionality of
+          this application.
+        </AlertDialogDescription>
+        <div className="mt-4 space-y-1">
           <Button onClick={() => startTour()} className="w-full">
             Start Tour
           </Button>

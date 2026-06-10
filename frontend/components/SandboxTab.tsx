@@ -115,6 +115,7 @@ export const SandboxTab: React.FC<SandboxTabProps> = ({
             }
           >
             <Button
+              id="tour-copy-session-id"
               variant="outline"
               size="icon"
               onClick={handleCopy}
