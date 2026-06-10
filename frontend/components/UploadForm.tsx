@@ -89,11 +89,34 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
     setErrorMsg(null)
 
     if (mode === "existing") {
-      if (!existingSessionId.trim()) {
+      const sessionId = existingSessionId.trim()
+      if (!sessionId) {
         setErrorMsg("Please enter a valid session ID.")
         return
       }
-      onGameUrlReady(existingSessionId.trim())
+
+      setIsUploading(true)
+      try {
+        const response = await fetch(
+          `/api/v1/play/${sessionId}_dump/custom_levels/get_public_levels_v2`
+        )
+        if (!response.ok) {
+          setErrorMsg("Server error while validating session.")
+          setIsUploading(false)
+          return
+        }
+        const data = await response.json()
+        if (!Array.isArray(data) || data.length === 0) {
+          setErrorMsg("Session ID does not exist or is invalid.")
+          setIsUploading(false)
+          return
+        }
+        onGameUrlReady(sessionId)
+      } catch (err) {
+        console.error("validation failed:", err)
+        setErrorMsg("Failed to validate session.")
+        setIsUploading(false)
+      }
       return
     }
 
@@ -355,7 +378,9 @@ export const UploadForm = ({ onGameUrlReady }: UploadFormProps) => {
               {isUploading ? (
                 <>
                   <RiLoader4Line className="mr-2 h-5 w-5 animate-spin" />
-                  Instrumenting Code...
+                  {mode === "upload"
+                    ? "Instrumenting Code..."
+                    : "Validating Session..."}
                 </>
               ) : (
                 <span className="relative z-10">Launch Sandbox</span>
